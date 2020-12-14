@@ -380,6 +380,7 @@ int main()
 	// -----------
 	Model casa("resources/objects/casa/prueba.obj");
 	Model casa2("resources/objects/casa2/casa2.obj");
+	Model casa3("resources/objects/casa3/casa3.obj");
 	//Cargando texturas
 
 	LoadTextures();
@@ -460,6 +461,11 @@ int main()
 		model = glm::scale(model, glm::vec3(0.35f));
 		staticShader.setMat4("model", model);
 		casa2.Draw(staticShader);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(200.0f, 0.0f, 400.0f));
+		model = glm::scale(model, glm::vec3(0.35f));
+		staticShader.setMat4("model", model);
+		casa3.Draw(staticShader);
 		// draw skybox as last
 		// -------------------
 
