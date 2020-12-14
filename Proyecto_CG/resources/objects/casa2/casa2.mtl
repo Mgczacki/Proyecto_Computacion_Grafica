@@ -1,0 +1,83 @@
+# 3ds Max Wavefront OBJ Exporter v0.99 - (c)2007 guruware
+# File Created: 14.12.2020 00:13:26
+
+newmtl orig_orig_orig_orig_orig_orig_orig_10057_wooden_door_v1
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.9000 0.9000 0.9000
+	Tr 0.0000
+	d 1.0000
+	Tf 1.0000 1.0000 1.0000
+	Pr 0.9000
+	Pm 0.0000
+	Pc 0.0000
+	Pcr 0.0000
+	Ni 1.5000
+	Ke 0.0000 0.0000 0.0000
+	illum 2
+	map_Kd -bm 0.0000 10057_wooden_door_v1_diffuse.jpg
+
+newmtl Material__73
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0314 0.0314 0.0314
+	Kd 0.0314 0.0314 0.0314
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka Map__42_Color Map.jpg
+	map_Kd Map__42_Color Map.jpg
+
+newmtl Material__13
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka Map__31_Map Output Selector.jpg
+	map_Kd Map__31_Map Output Selector.jpg
+
+newmtl Material__0
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.9333 0.9333 0.9333
+	Kd 0.9333 0.9333 0.9333
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka Map__21_Map Output Selector.jpg
+	map_Kd Map__21_Map Output Selector.jpg
+
+newmtl Material__177
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka TexturesCom_Vents0021_1_seamless_S.jpg
+	map_Kd TexturesCom_Vents0021_1_seamless_S.jpg
+
+newmtl wire_135006006
+	Ns 32
+	d 1
+	Tr 0
+	Tf 1 1 1
+	illum 2
+	Ka 0.5294 0.0235 0.0235
+	Kd 0.5294 0.0235 0.0235
+	Ks 0.3500 0.3500 0.3500
