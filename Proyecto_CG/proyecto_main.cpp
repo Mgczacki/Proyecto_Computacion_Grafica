@@ -378,8 +378,8 @@ int main()
 
 	// load models
 	// -----------
-	Model carro("resources/objects/lambo/carroceria.obj");
 	Model casa("resources/objects/casa/prueba.obj");
+	Model casa2("resources/objects/casa2/casa2.obj");
 	//Cargando texturas
 
 	LoadTextures();
@@ -455,6 +455,11 @@ int main()
 		model = glm::scale(model, glm::vec3(0.35f));
 		staticShader.setMat4("model", model);
 		casa.Draw(staticShader);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(400.0f, 0.0f, 200.0f));
+		model = glm::scale(model, glm::vec3(0.35f));
+		staticShader.setMat4("model", model);
+		casa2.Draw(staticShader);
 		// draw skybox as last
 		// -------------------
 
