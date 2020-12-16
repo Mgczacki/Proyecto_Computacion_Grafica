@@ -378,10 +378,11 @@ int main()
 
 	// load models
 	// -----------
-	Model casa1("resources/objects/casa1/casa1.obj");
-	Model casa2("resources/objects/casa2/casa2.obj");
-	Model casa3("resources/objects/casa3/casa3.obj");
-	Model casa4("resources/objects/casa4/casa4.obj");
+	//Model casa1("resources/objects/casa1/casa1.obj");
+	//Model casa2("resources/objects/casa2/casa2.obj");
+	//Model casa3("resources/objects/casa3/casa3.obj");
+	//Model casa4("resources/objects/casa4/casa4.obj");
+	Model barrio("resources/objects/barrio/barrio.obj");
 	//Cargando texturas
 
 	LoadTextures();
@@ -457,8 +458,9 @@ int main()
 		model = glm::scale(model, glm::vec3(0.35f));
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		staticShader.setMat4("model", model);
-		casa1.Draw(staticShader);
-		model = glm::mat4(1.0f);
+		barrio.Draw(staticShader);
+		//casa1.Draw(staticShader);
+		/*model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(400.0f, 0.0f, 200.0f));
 		model = glm::scale(model, glm::vec3(0.35f));
 		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -475,7 +477,7 @@ int main()
 		model = glm::scale(model, glm::vec3(0.35f));
 		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		staticShader.setMat4("model", model);
-		casa4.Draw(staticShader);
+		casa4.Draw(staticShader);*/
 		// draw skybox as last
 		// -------------------
 
