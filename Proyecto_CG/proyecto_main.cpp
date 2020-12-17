@@ -50,7 +50,7 @@ float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
 // timing
-const int FPS = 120;
+const int FPS = 60;
 const int LOOP_TIME = 1000 / FPS; // = 16 milisec // 1000 millisec == 1 sec
 double	deltaTime = 0.0f,
 		lastFrame = 0.0f;
@@ -68,6 +68,183 @@ unsigned int	t_pasto,
 
 //Mapa
 float mapscale = 1.0f;
+
+// KeyFrame para Pong
+float	pong_l_pos = 0.0f,
+		pong_r_pos = 0.0f,
+		pong_b_xpos = 0.0f,
+		pong_b_ypos = 0.0f;
+float	pong_l_pos_inc = 0.0f,
+		pong_r_pos_inc = 0.0f,
+		pong_b_xpos_inc = 0.0f,
+		pong_b_ypos_inc = 0.0f;
+
+// KeyFrame para la pelota
+float	pel_x = 0.0f,
+pel_y = 0.0f,
+pel_z = 0.0f,
+pel_rot_y = 0.0f;
+float	pel_x_inc = 0.0f,
+pel_y_inc = 0.0f,
+pel_z_inc = 0.0f,
+pel_rot_y_inc = 0.0f;
+
+#define MAX_FRAMES_PONG 7
+
+#define MAX_FRAMES_PELOTA 13
+
+int i_max_steps = 60;
+int i_curr_steps = 0;
+typedef struct pong_frame
+{
+	//Variables para GUARDAR Key Frames
+	float	pong_l_pos = 0.0f,
+			pong_r_pos = 0.0f,
+			pong_b_xpos = 0.0f,
+			pong_b_ypos = 0.0f;
+
+}PONG_FRAME;
+
+PONG_FRAME KeyFramePong[MAX_FRAMES_PONG];
+int FrameIndexPong = 7;			//introducir datos
+int playIndexPong = 0;
+
+typedef struct pelota_frame
+{
+	//Variables para GUARDAR Key Frames
+	float	pel_x = 0.0f,
+		pel_y = 0.0f,
+		pel_z = 0.0f,
+		pel_rot_y = 0.0f;
+
+}PELOTA_FRAME;
+
+PELOTA_FRAME KeyFramePelota[MAX_FRAMES_PELOTA];
+int FrameIndexPelota = 13;			//introducir datos
+int playIndexPelota = 0;
+
+/*
+Frame Index = 0                                                                                                                                                                                      KeyFramePong[0].pong_l_pos = 2.9;                                                                                                                                                                        KeyFramePong[0].pong_r_pos = 0;                                                                                                                                                                          KeyFramePong[0].pong_b_xpos = -0.5;                                                                                                                                                                      KeyFramePong[0].pong_b_ypos = 0;                                                                                                                                                                         Frame Index = 1                                                                                                                                                                                      KeyFramePong[1].pong_l_pos = 8.7;                                                                                                                                                                        KeyFramePong[1].pong_r_pos = 2.5;                                                                                                                                                                        KeyFramePong[1].pong_b_xpos = 15.5;                                                                                                                                                                      KeyFramePong[1].pong_b_ypos = 8.8;                                                                                                                                                                       Frame Index = 2                                                                                                                                                                                      KeyFramePong[2].pong_l_pos = 5.4;                                                                                                                                                                        KeyFramePong[2].pong_r_pos = 5.7;                                                                                                                                                                        KeyFramePong[2].pong_b_xpos = -0.5;                                                                                                                                                                      KeyFramePong[2].pong_b_ypos = 6.5;                                                                                                                                                                       Frame Index = 3                                                                                                                                                                                      KeyFramePong[3].pong_l_pos = -0.0999999;                                                                                                                                                                 KeyFramePong[3].pong_r_pos = 3.8;                                                                                                                                                                        KeyFramePong[3].pong_b_xpos = 15.5;                                                                                                                                                                      KeyFramePong[3].pong_b_ypos = -0.0999999;
+*/
+
+void saveFrame(void)
+{
+	//printf("frameindex %d\n", FrameIndex);
+	std::cout << "Frame Index = " << FrameIndexPelota << std::endl;
+	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_x = " << pel_x << ";" << std::endl;
+	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_y = " << pel_y << ";" << std::endl;
+	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_z = " << pel_z << ";" << std::endl;
+	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_rot_y = " << pel_rot_y << ";" << std::endl;
+	KeyFramePelota[FrameIndexPong].pel_x = pel_x;
+	KeyFramePelota[FrameIndexPong].pel_y = pel_y;
+	KeyFramePelota[FrameIndexPong].pel_z = pel_z;
+	KeyFramePelota[FrameIndexPong].pel_rot_y = pel_rot_y;
+	FrameIndexPelota++;
+}
+
+void resetPelotaElements(void)
+{
+	pel_x = KeyFramePelota[0].pel_x;
+	pel_y = KeyFramePelota[0].pel_y;
+	pel_z = KeyFramePelota[0].pel_z;
+	pel_rot_y = KeyFramePelota[0].pel_rot_y;
+}
+void resetPongElements(void)
+{
+	pong_l_pos = KeyFramePong[0].pong_l_pos;
+	pong_r_pos = KeyFramePong[0].pong_r_pos;
+	pong_b_xpos = KeyFramePong[0].pong_b_xpos;
+	pong_b_ypos = KeyFramePong[0].pong_b_ypos;
+}
+
+void interpolationPong(void)
+{
+	pong_l_pos_inc = (KeyFramePong[playIndexPong + 1].pong_l_pos - KeyFramePong[playIndexPong].pong_l_pos) / i_max_steps;
+	pong_r_pos_inc = (KeyFramePong[playIndexPong + 1].pong_r_pos - KeyFramePong[playIndexPong].pong_r_pos) / i_max_steps;
+	pong_b_xpos_inc = (KeyFramePong[playIndexPong + 1].pong_b_xpos - KeyFramePong[playIndexPong].pong_b_xpos) / i_max_steps;
+	pong_b_ypos_inc = (KeyFramePong[playIndexPong + 1].pong_b_ypos - KeyFramePong[playIndexPong].pong_b_ypos) / i_max_steps;
+}
+void interpolationPelota(void)
+{
+	pel_x_inc = (KeyFramePelota[playIndexPelota + 1].pel_x - KeyFramePelota[playIndexPelota].pel_x) / i_max_steps;
+	pel_y_inc = (KeyFramePelota[playIndexPelota + 1].pel_y - KeyFramePelota[playIndexPelota].pel_y) / i_max_steps;
+	pel_z_inc = (KeyFramePelota[playIndexPelota + 1].pel_z - KeyFramePelota[playIndexPelota].pel_z) / i_max_steps;
+	pel_rot_y_inc = (KeyFramePelota[playIndexPelota + 1].pel_rot_y - KeyFramePelota[playIndexPelota].pel_rot_y) / i_max_steps;
+}
+bool play = false;
+void animate(void)
+{		//Para Pong
+		if (i_curr_steps >= i_max_steps) //end of animation between frames?
+		{
+			playIndexPong++;
+			playIndexPelota++;
+			if (playIndexPong > FrameIndexPong - 2)	//end of total animation?
+			{
+				playIndexPong = 0;
+				resetPongElements();
+				interpolationPong();
+			}
+			else //Next frame interpolations
+			{  
+				interpolationPong();
+			}
+			if (playIndexPelota > FrameIndexPelota - 2)	//end of total animation?
+			{
+				playIndexPelota = 0;
+				resetPelotaElements();
+				interpolationPelota();
+			}
+			else //Next frame interpolations
+			{
+				interpolationPelota();
+			}
+			i_curr_steps = 0; //Reset counter
+		}
+		else
+		{
+			//Draw animation -PONG
+			pong_l_pos += pong_l_pos_inc;
+			pong_r_pos += pong_r_pos_inc;
+			pong_b_xpos += pong_b_xpos_inc;
+			pong_b_ypos += pong_b_ypos_inc;
+			//Draw animation -Pelota
+			pel_x += pel_x_inc;
+			pel_y += pel_y_inc;
+			pel_z += pel_z_inc;
+			pel_rot_y += pel_rot_y_inc;
+			//Contador++
+			i_curr_steps++;
+		}
+		//Para pelota
+		//if(play)
+		//{
+		//	if (i_curr_steps >= i_max_steps) //end of animation between frames?
+		//	{
+		//		playIndexPelota++;
+		//		if (playIndexPelota > FrameIndexPelota - 2)	//end of total animation?
+		//		{
+		//			playIndexPelota = 0;
+		//			play = false;
+		//		}
+		//		else //Next frame interpolations
+		//		{
+		//			i_curr_steps = 0; //Reset counter
+		//							  //Interpolation
+		//			interpolationPelota();
+		//		}
+		//	}
+		//	else
+		//	{
+		//		//Draw animation
+		//		pel_x += pel_x_inc;
+		//		pel_y += pel_y_inc;
+		//		pel_z += pel_z_inc;
+		//		pel_rot_y += pel_rot_y_inc;
+
+		//		i_curr_steps++;
+		//	}
+		//}
+}
 
 unsigned int generateTextures(const char* filename, bool alfa)
 {
@@ -304,10 +481,6 @@ void LoadTextures()
 	t_pavimento = generateTextures("resources/texturas/pavimento.jpg", 0);
 }
 
-void animate()
-{
-
-}
 
 int main()
 {
@@ -386,12 +559,138 @@ int main()
 	Model bosque("resources/objects/bosque/bosque.obj");
 	Model caminos("resources/objects/caminos/caminos.obj");
 	Model postes("resources/objects/postes/postes.obj");
+	//Para animacion de PONG.
+	Model pong_l("resources/objects/pong/pong_izq.obj");
+	Model pong_r("resources/objects/pong/pong_der.obj");
+	Model pong_b("resources/objects/pong/pong_ball.obj");
+	//Para animacion de la pelota en la alberca.
+	Model pelota("resources/objects/pelota/pelota.obj");
 	//Cargando texturas
 
 	LoadTextures();
-	//Parámetros del mapa
-	float escala_retícula = 1.0f;
+	//Inicializo keyframes para Pong
+	for (int i = 0; i < MAX_FRAMES_PONG; i++)
+	{
+		KeyFramePong[i].pong_l_pos = 0;
+		KeyFramePong[i].pong_r_pos = 0;
+		KeyFramePong[i].pong_b_xpos = 0;
+		KeyFramePong[i].pong_b_ypos = 0;
 
+	}
+	KeyFramePong[0].pong_l_pos = 1.3;
+	KeyFramePong[0].pong_r_pos = 0;
+	KeyFramePong[0].pong_b_xpos = -0.5;
+	KeyFramePong[0].pong_b_ypos = 0.1;
+
+	KeyFramePong[1].pong_l_pos = 4.7;
+	KeyFramePong[1].pong_r_pos = 1.7;
+	KeyFramePong[1].pong_b_xpos = 15.5;
+	KeyFramePong[1].pong_b_ypos = 4.7;
+
+	KeyFramePong[2].pong_l_pos = 2.3;
+	KeyFramePong[2].pong_r_pos = 7.79999;
+	KeyFramePong[2].pong_b_xpos = -0.6;
+	KeyFramePong[2].pong_b_ypos = 8.09999;
+
+	KeyFramePong[3].pong_l_pos = 6.3;
+	KeyFramePong[3].pong_r_pos = 3.6;
+	KeyFramePong[3].pong_b_xpos = 15.5;
+	KeyFramePong[3].pong_b_ypos = 5.8;
+
+	KeyFramePong[4].pong_l_pos = 4.1;
+	KeyFramePong[4].pong_r_pos = 8.2;
+	KeyFramePong[4].pong_b_xpos = -0.6;
+	KeyFramePong[4].pong_b_ypos = 8.3;
+
+	KeyFramePong[5].pong_l_pos = 7.1;
+	KeyFramePong[5].pong_r_pos = 6.2;
+	KeyFramePong[5].pong_b_xpos = 15.5;
+	KeyFramePong[5].pong_b_ypos = 6.8;
+
+	KeyFramePong[6].pong_l_pos = 1.3;
+	KeyFramePong[6].pong_r_pos = 0;
+	KeyFramePong[6].pong_b_xpos = -0.5;
+	KeyFramePong[6].pong_b_ypos = 0.1;
+	resetPongElements();
+	interpolationPong();
+	playIndexPong = 0;
+	//Inicializo frames para Pelota
+	for (int i = 0; i < MAX_FRAMES_PELOTA; i++)
+	{
+		KeyFramePelota[i].pel_x = 0;
+		KeyFramePelota[i].pel_y = 0;
+		KeyFramePelota[i].pel_z = 0;
+		KeyFramePelota[i].pel_rot_y = 0;
+	}
+	KeyFramePelota[0].pel_x = -42.2999;
+	KeyFramePelota[0].pel_y = 2.2;
+	KeyFramePelota[0].pel_z = -231.105;
+	KeyFramePelota[0].pel_rot_y = 26.6001;
+
+	KeyFramePelota[1].pel_x = -44.4999;
+	KeyFramePelota[1].pel_y = 2.2;
+	KeyFramePelota[1].pel_z = -234.305;
+	KeyFramePelota[1].pel_rot_y = 3.3;
+
+	KeyFramePelota[2].pel_x = -47.6998;
+	KeyFramePelota[2].pel_y = 2.4;
+	KeyFramePelota[2].pel_z = -230.905;
+	KeyFramePelota[2].pel_rot_y = -35.3;
+
+	KeyFramePelota[3].pel_x = -52.4998;
+	KeyFramePelota[3].pel_y = 1.5;
+	KeyFramePelota[3].pel_z = -234.705;
+	KeyFramePelota[3].pel_rot_y = -58.6997;
+
+	KeyFramePelota[4].pel_x = -50.3998;
+	KeyFramePelota[4].pel_y = 2.6;
+	KeyFramePelota[4].pel_z = -239.905;
+	KeyFramePelota[4].pel_rot_y = -96.5991;
+
+	KeyFramePelota[5].pel_x = -54.3998;
+	KeyFramePelota[5].pel_y = 1.8;
+	KeyFramePelota[5].pel_z = -232.405;
+	KeyFramePelota[5].pel_rot_y = -130.5991;
+
+	KeyFramePelota[6].pel_x = -51.7;
+	KeyFramePelota[6].pel_y = 1.3;
+	KeyFramePelota[6].pel_z = -230.405;
+	KeyFramePelota[6].pel_rot_y = -159.001;
+
+	KeyFramePelota[7].pel_x = -47.9001;
+	KeyFramePelota[7].pel_y = 1;
+	KeyFramePelota[7].pel_z = -228.605;
+	KeyFramePelota[7].pel_rot_y = -120.901;
+
+	KeyFramePelota[8].pel_x = -45;
+	KeyFramePelota[8].pel_y = 1.8;
+	KeyFramePelota[8].pel_z = -232.405;
+	KeyFramePelota[8].pel_rot_y = -159.001;
+
+	KeyFramePelota[9].pel_x = -43.8;
+	KeyFramePelota[9].pel_y = 1.6;
+	KeyFramePelota[9].pel_z = -228.905;
+	KeyFramePelota[9].pel_rot_y = -200.603;
+
+	KeyFramePelota[10].pel_x = -40.2001;
+	KeyFramePelota[10].pel_y = 1.1;
+	KeyFramePelota[10].pel_z = -228.105;
+	KeyFramePelota[10].pel_rot_y = -229.605;
+
+	KeyFramePelota[11].pel_x = -38.3001;
+	KeyFramePelota[11].pel_y = -0.199999;
+	KeyFramePelota[11].pel_z = -233.905;
+	KeyFramePelota[11].pel_rot_y = -229.905;
+
+	KeyFramePelota[12].pel_x = -42.2999;
+	KeyFramePelota[12].pel_y = 2.2;
+	KeyFramePelota[12].pel_z = -231.105;
+	KeyFramePelota[12].pel_rot_y = 26.6001;
+	resetPelotaElements();
+	interpolationPelota();
+	playIndexPelota = 0;
+	//Inicializo timer de keyframes
+	i_curr_steps = 0;
 	// render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
@@ -469,25 +768,25 @@ int main()
 		casa3.Draw(staticShader);
 		casa4.Draw(staticShader);
 		postes.Draw(staticShader);
-		//casa1.Draw(staticShader);
-		/*model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(400.0f, 0.0f, 200.0f));
-		model = glm::scale(model, glm::vec3(0.35f));
-		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		casa2.Draw(staticShader);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(200.0f, 0.0f, 400.0f));
-		model = glm::scale(model, glm::vec3(0.35f));
-		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		casa3.Draw(staticShader);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(400.0f, 0.0f, 400.0f));
-		model = glm::scale(model, glm::vec3(0.35f));
-		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		casa4.Draw(staticShader);*/
+		//Animacion 1: PONG
+		tmp = model;
+		tmp = glm::translate(tmp, glm::vec3(0.0f, pong_l_pos, 0.0f));
+		staticShader.setMat4("model", tmp);
+		pong_l.Draw(staticShader);
+		tmp = model;
+		tmp = glm::translate(tmp, glm::vec3(0.0f, pong_r_pos, 0.0f));
+		staticShader.setMat4("model", tmp);
+		pong_r.Draw(staticShader);
+		tmp = model;
+		tmp = glm::translate(tmp, glm::vec3(pong_b_xpos, pong_b_ypos, 0.0f));
+		staticShader.setMat4("model", tmp);
+		pong_b.Draw(staticShader);
+		//Animacion 2: Pelota
+		tmp = model;
+		tmp = glm::translate(tmp, glm::vec3(pel_x, pel_y, pel_z));
+		tmp = glm::rotate(tmp, glm::radians(pel_rot_y), glm::vec3(0.0f, 1.0f, 0.0f));
+		staticShader.setMat4("model", tmp);
+		pelota.Draw(staticShader);
 		// draw skybox as last
 		// -------------------
 
@@ -559,6 +858,51 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		speedMultiplier *= 2;
 	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		speedMultiplier /= 2;
+	//PARA PONG
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+		pel_x += 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+		pel_x -= 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+		pel_y += 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+		pel_y -= 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS)
+		pel_z += 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS)
+		pel_z -= 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS)
+		pel_rot_y += 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS)
+		pel_rot_y -= 0.1f;
+	//if (key == GLFW_KEY_P && action == GLFW_PRESS)
+	//{
+	//	if (play == false && (FrameIndexPelota > 1))
+	//	{
+	//		std::cout << "Play animation" << std::endl;
+	//		resetPelotaElements();
+	//		//First Interpolation				
+	//		interpolationPelota();
+
+	//		play = true;
+	//		playIndexPelota = 0;
+	//		i_curr_steps = 0;
+	//	}
+	//	else
+	//	{
+	//		play = false;
+	//		std::cout << "Not enough Key Frames" << std::endl;
+	//	}
+	//}
+
+	////To Save a KeyFramePong
+	//if (key == GLFW_KEY_L && action == GLFW_PRESS)
+	//{
+	//	if (FrameIndexPelota < MAX_FRAMES_PELOTA)
+	//	{
+	//		saveFrame();
+	//	}
+	//}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
