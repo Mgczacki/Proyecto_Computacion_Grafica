@@ -44,7 +44,7 @@ const unsigned int SCR_HEIGHT = 1440;
 
 // camera
 Camera camera(glm::vec3(0.0f, 4.0f, 30.0f));
-float MovementSpeed = 0.3;
+float speedMultiplier = 0.3;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -103,14 +103,14 @@ unsigned int generateTextures(const char* filename, bool alfa)
 	stbi_image_free(data);
 }
 float map_max_x = 588.0f;
-float map_max_z = 725.0f;
+float map_max_z = 800.0f;
 void drawingGrass()
 {
 	float vertices[] = {
 		// positions          // texture coords
-		 map_max_x , 0.0f, 0.0f,   map_max_x, 0.0f, // top right
-		 map_max_x , 0.0f, map_max_z ,   map_max_x, map_max_z, // bottom right
-		0.0f, 0.0f, map_max_z ,   0.0f, map_max_z , // bottom left
+		 map_max_x , 0.0f, 0.0f,   map_max_x/3, 0.0f, // top right
+		 map_max_x , 0.0f, map_max_z ,   map_max_x/3, map_max_z/3, // bottom right
+		0.0f, 0.0f, map_max_z ,   0.0f, map_max_z/3, // bottom left
 		0.0f, 0.0f, 0.0f,   0.0f, 0.0f,  // top left
 	};
 
@@ -138,10 +138,10 @@ void drawingGrass()
 	glEnableVertexAttribArray(1);
 }
 
-float street_left_left = 364.0f;
-float street_left_right = 368.0f;
-float street_right_left = 376.0f;
-float street_right_right = 380.f;
+float street_left_left = 290.0f;
+float street_left_right = 302.0f;
+float street_right_left = 334.0f;
+float street_right_right = 346.f;
 float street_height = 0.2;
 float pavement_height = 0.1;
 void drawingStreet()
@@ -384,6 +384,8 @@ int main()
 	Model casa4("resources/objects/casa4/casa4.obj");
 	Model bardas("resources/objects/bardas/bardas.obj");
 	Model bosque("resources/objects/bosque/bosque.obj");
+	Model caminos("resources/objects/caminos/caminos.obj");
+	Model postes("resources/objects/postes/postes.obj");
 	//Cargando texturas
 
 	LoadTextures();
@@ -455,16 +457,18 @@ int main()
 		//--------------------
 		staticShader.setVec3("aColor", 0.0f, 0.0f, 0.0f);
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(200.0f, 0.0f, 200.0f));
+		model = glm::translate(model, glm::vec3(200.0f, 0.0f, 300.0f));
 		model = glm::scale(model, glm::vec3(0.35f));
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		staticShader.setMat4("model", model);
 		bardas.Draw(staticShader);
 		bosque.Draw(staticShader);
+		caminos.Draw(staticShader);
 		casa1.Draw(staticShader);
 		casa2.Draw(staticShader);
 		casa3.Draw(staticShader);
 		casa4.Draw(staticShader);
+		postes.Draw(staticShader);
 		//casa1.Draw(staticShader);
 		/*model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(400.0f, 0.0f, 200.0f));
@@ -496,6 +500,7 @@ int main()
 		projectionShader.setMat4("model", model);
 		projectionShader.setMat4("view", view);
 		projectionShader.setMat4("projection", projection);
+
 		drawingGrass();
 		projectionShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
 		projectionShader.setMat4("model", model);
@@ -543,13 +548,17 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, (float)deltaTime);
+		camera.ProcessKeyboard(FORWARD, (float)deltaTime * speedMultiplier);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, (float)deltaTime);
+		camera.ProcessKeyboard(BACKWARD, (float)deltaTime * speedMultiplier);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, (float)deltaTime);
+		camera.ProcessKeyboard(LEFT, (float)deltaTime * speedMultiplier);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, (float)deltaTime);
+		camera.ProcessKeyboard(RIGHT, (float)deltaTime * speedMultiplier);
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		speedMultiplier *= 2;
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		speedMultiplier /= 2;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
