@@ -269,6 +269,8 @@ bool robot_correct_position(float x, float z)
 	}
 	return false;
 }
+
+
 bool angle_verified = false;
 
 int plane_state = 0;
@@ -281,6 +283,67 @@ float	movAuto_x = 0.0f,
 movAuto_z = 0.0f,
 orienta = 0.0f,
 rot_llanta = 0.0f;
+//Para la pseudo máquina de estados
+int steps_carro = 32;
+//La animación del carro en forma de dos arreglos
+float anim_x[] = { 118.702, 118.702, 113.514, 109.169, 106.169, 104.347, 103.534, 102.903, 102.279, 101.657, 101.682, 101.238, 101.742,
+102.474, 103.141, 103.988, 104.777, 106.243, 109.572, 177.793, 286.741, 291.249, 294.54, 296.299, 298.214, 300.326, 301.416,
+304.111, 307.582, 308.837, 310.46, 309.892};
+float anim_z[] = { 277.351, 278.351, 278.816, 277.328, 275.966, 273.054, 270.882, 268.724, 266.517, 264.397, 261.528, 257.828, 255.598,
+253.415, 251.334, 249.832, 248.256, 245.477, 243.75, 242.395, 246.957, 246.919, 246.361, 245.567, 244.3, 242.34, 240.412,
+238.009, 233.838, 229.598, 159.368, 2.2559};
+int state_carro = 32;
+
+bool car_correct_position(float x, float z)
+{
+	if (movAuto_x == x && movAuto_z == z)
+		return true;
+	float inc = 1.0f;//Incremento de distancia por unidad de tiempo
+	float deltax = x - movAuto_x;
+	float deltaz = z - movAuto_z;
+	float target_angle = degToRad(vectorAngle(deltax, deltaz));
+	float incx = inc * cos(target_angle);
+	float incz = inc * sin(target_angle);
+	if (sqrt((deltax * deltax) + (deltaz * deltaz)) <= inc)
+	{
+		movAuto_x = x;
+		movAuto_z = z;
+	}
+	else
+	{
+		movAuto_x += incx;
+		movAuto_z += incz;
+	}
+	//Volteamos el carro con cierto smoothing.
+	float angulo = vectorAngle(-deltax, deltaz);
+	float delta_angle = orienta - angulo;
+	float inc_angulo = 4.0f;
+	if (delta_angle != 0.0f)
+	{
+		if (delta_angle > 180.0f)
+		{
+			delta_angle = delta_angle - 360.0f;
+		}
+		else if (delta_angle < -180.0f)
+		{
+			delta_angle = delta_angle + 360.0f;
+		}
+		if (abs(delta_angle) <= inc_angulo)
+		{
+			orienta = angulo;
+			//std::cout << "Reached target angle " << target_angle << std::endl;
+		}
+		else if (delta_angle < 0)
+		{
+			orienta += inc_angulo;
+		}
+		else
+		{
+			orienta -= inc_angulo;
+		}
+	}
+	return false;
+}
 
 void animate(void)
 {		//Para Keyframes (Pong y Pelota)
@@ -586,6 +649,19 @@ void animate(void)
 		if (rot_llanta >= 360.0f)
 		{
 			rot_llanta = 0.0f;
+		}
+		if (state_carro == steps_carro)
+		{
+			state_carro = 1;
+			movAuto_x = anim_x[0];
+			movAuto_z = anim_z[0];
+			float dx = anim_x[2] - anim_x[1];
+			float dz = anim_z[2] - anim_z[1];
+			orienta = vectorAngle(-dx, dz);
+		}
+		if(car_correct_position(anim_x[state_carro], anim_z[state_carro]))
+		{
+			state_carro++;
 		}
 }
 
@@ -1164,35 +1240,35 @@ int main()
 		staticShader.setMat4("model", tmp);
 		robot_rotor_der.Draw(staticShader);
 		//Animacion 5: Carro
-		model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::translate(model, glm::vec3(15.0f + movAuto_x, -1.0f, movAuto_z));
-		tmp = model = glm::rotate(model, glm::radians(orienta), glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(movAuto_x, 0.0f, movAuto_z));
+		tmp = model = glm::rotate(model, glm::radians(270.0f + orienta), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		staticShader.setMat4("model", model);
 		carro.Draw(staticShader);
 
-		model = glm::translate(tmp, glm::vec3(8.5f, 3.5f, 12.9f));
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::translate(tmp, glm::vec3(8.5f * 0.4f, 3.5f * 0.4f, 12.9f * 0.4f));
+		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(-rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
 		staticShader.setMat4("model", model);
 		llanta.Draw(staticShader);	//Izq delantera
 
-		model = glm::translate(tmp, glm::vec3(-8.5f, 3.5f, 12.9f));
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::translate(tmp, glm::vec3(-8.5f * 0.4f, 3.5f * 0.4f, 12.9f * 0.4f));
+		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, glm::radians(rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
 		staticShader.setMat4("model", model);
 		llanta.Draw(staticShader);	//Der delantera
 
-		model = glm::translate(tmp, glm::vec3(-8.5f, 4.0f, -14.5f));
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::translate(tmp, glm::vec3(-8.5f * 0.4f, 4.0f * 0.4f, -14.5f * 0.4f));
+		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, glm::radians(rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
 		staticShader.setMat4("model", model);
 		llanta.Draw(staticShader);	//Der trasera
 
-		model = glm::translate(tmp, glm::vec3(8.5f, 4.0f, -14.5f));
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::translate(tmp, glm::vec3(8.5f * 0.4f, 4.0f * 0.4f, -14.5f * 0.4f));
+		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(-rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
 		staticShader.setMat4("model", model);
 		llanta.Draw(staticShader);	//Izq trase
@@ -1221,7 +1297,7 @@ int main()
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		glBindTexture(GL_TEXTURE_2D, t_pavimento);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(36 * sizeof(float)));
-		//FALTAN BARDAS, BOSQUES, CAMINOS, ALBERCA
+
 		// -------------------------------------------------------------------------------------------------------------------------
 		// Termina Escenario
 		// -------------------------------------------------------------------------------------------------------------------------
