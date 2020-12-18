@@ -17,6 +17,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include<time.h>
 
+#include <irrklang/irrKlang.h>
+using namespace irrklang;
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>	//Texture
@@ -30,6 +32,8 @@
 #include <model.h>
 #include <Skybox.h>
 
+//Para reproducir sonidos.
+ISoundEngine* SoundEngine = createIrrKlangDevice();
 
 //Utilidad para obtener el ángulo absoluto de un vector en un plano 2D.
 constexpr float radToDeg(float rad) { return rad * (180.0f / M_PI); }
@@ -86,7 +90,8 @@ GLuint VBO, VAO, EBO;
 
 //Texture
 unsigned int	t_pasto,
-                t_acera,
+
+t_acera,
 				t_pavimento;
 
 //Mapa
@@ -115,12 +120,28 @@ pel_y_inc = 0.0f,
 pel_z_inc = 0.0f,
 pel_rot_y_inc = 0.0f;
 
+// KeyFrame para Recorrido
+float	rec_pos_x = 0.0f,
+rec_pos_y = 0.0f,
+rec_pos_z = 0.0f,
+rec_pitch = 0.0f,
+rec_yaw = 0.0f;
+float	rec_pos_x_inc = 0.0f,
+rec_pos_y_inc = 0.0f,
+rec_pos_z_inc = 0.0f,
+rec_pitch_inc = 0.0f,
+rec_yaw_inc = 0.0f;
+
+
 #define MAX_FRAMES_PONG 7
 
 #define MAX_FRAMES_PELOTA 13
 
+#define MAX_FRAMES_RECORRIDO 110//Guardo unos extra, pero realmente son 106
+
 int i_max_steps = 60;
 int i_curr_steps = 0;
+int i_curr_steps_p = 0;
 typedef struct pong_frame
 {
 	//Variables para GUARDAR Key Frames
@@ -149,9 +170,23 @@ PELOTA_FRAME KeyFramePelota[MAX_FRAMES_PELOTA];
 int FrameIndexPelota = 13;			//introducir datos
 int playIndexPelota = 0;
 
-/*
-Frame Index = 0                                                                                                                                                                                      KeyFramePong[0].pong_l_pos = 2.9;                                                                                                                                                                        KeyFramePong[0].pong_r_pos = 0;                                                                                                                                                                          KeyFramePong[0].pong_b_xpos = -0.5;                                                                                                                                                                      KeyFramePong[0].pong_b_ypos = 0;                                                                                                                                                                         Frame Index = 1                                                                                                                                                                                      KeyFramePong[1].pong_l_pos = 8.7;                                                                                                                                                                        KeyFramePong[1].pong_r_pos = 2.5;                                                                                                                                                                        KeyFramePong[1].pong_b_xpos = 15.5;                                                                                                                                                                      KeyFramePong[1].pong_b_ypos = 8.8;                                                                                                                                                                       Frame Index = 2                                                                                                                                                                                      KeyFramePong[2].pong_l_pos = 5.4;                                                                                                                                                                        KeyFramePong[2].pong_r_pos = 5.7;                                                                                                                                                                        KeyFramePong[2].pong_b_xpos = -0.5;                                                                                                                                                                      KeyFramePong[2].pong_b_ypos = 6.5;                                                                                                                                                                       Frame Index = 3                                                                                                                                                                                      KeyFramePong[3].pong_l_pos = -0.0999999;                                                                                                                                                                 KeyFramePong[3].pong_r_pos = 3.8;                                                                                                                                                                        KeyFramePong[3].pong_b_xpos = 15.5;                                                                                                                                                                      KeyFramePong[3].pong_b_ypos = -0.0999999;
-*/
+//RECORRIDO
+
+typedef struct recorrido_frame
+{
+	//Variables para GUARDAR Key Frames
+	float	rec_pos_x = 0.0f,
+		rec_pos_y = 0.0f,
+		rec_pos_z = 0.0f,
+		rec_pitch = 0.0f,
+		rec_yaw = 0.0f;
+
+}REC_FRAME;
+
+REC_FRAME KeyFrameRec[MAX_FRAMES_RECORRIDO];
+int FrameIndexRec = 0;			//introducir datos
+int playIndexRec = 0;
+
 
 //Animación robot
 float robot_pos_x = 204.127f,
@@ -167,16 +202,31 @@ float avion_pos_x = 0.0f,
 void saveFrame(void)
 {
 	//printf("frameindex %d\n", FrameIndex);
-	std::cout << "Frame Index = " << FrameIndexPelota << std::endl;
-	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_x = " << pel_x << ";" << std::endl;
-	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_y = " << pel_y << ";" << std::endl;
-	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_z = " << pel_z << ";" << std::endl;
-	std::cout << "KeyFramePelota[" << FrameIndexPelota << "].pel_rot_y = " << pel_rot_y << ";" << std::endl;
-	KeyFramePelota[FrameIndexPong].pel_x = pel_x;
-	KeyFramePelota[FrameIndexPong].pel_y = pel_y;
-	KeyFramePelota[FrameIndexPong].pel_z = pel_z;
-	KeyFramePelota[FrameIndexPong].pel_rot_y = pel_rot_y;
-	FrameIndexPelota++;
+	rec_pos_x = camera.Position.x;
+	rec_pos_y = camera.Position.y;
+	rec_pos_z = camera.Position.z;
+	rec_yaw = camera.Yaw;
+	rec_pitch = camera.Pitch;
+	std::cout << "KeyFrameRec[" << FrameIndexRec << "].rec_pos_x = " << rec_pos_x << ";" << std::endl;
+	std::cout << "KeyFrameRec[" << FrameIndexRec << "].rec_pos_y = " << rec_pos_y << ";" << std::endl;
+	std::cout << "KeyFrameRec[" << FrameIndexRec << "].rec_pos_z = " << rec_pos_z << ";" << std::endl;
+	std::cout << "KeyFrameRec[" << FrameIndexRec << "].rec_yaw = " << rec_yaw << ";" << std::endl;
+	std::cout << "KeyFrameRec[" << FrameIndexRec << "].rec_pitch = " << rec_pitch << ";" << std::endl;
+	KeyFrameRec[FrameIndexRec].rec_pos_x = rec_pos_x;
+	KeyFrameRec[FrameIndexRec].rec_pos_y = rec_pos_y;
+	KeyFrameRec[FrameIndexRec].rec_pos_z = rec_pos_z;
+	KeyFrameRec[FrameIndexRec].rec_yaw = rec_yaw;
+	KeyFrameRec[FrameIndexRec].rec_pitch = rec_pitch;
+	FrameIndexRec++;
+}
+
+void resetRecorridoElements(void)
+{
+	rec_pos_x = KeyFrameRec[0].rec_pos_x;
+	rec_pos_y = KeyFrameRec[0].rec_pos_y;
+	rec_pos_z = KeyFrameRec[0].rec_pos_z;
+	rec_pitch = KeyFrameRec[0].rec_pitch;
+	rec_yaw = KeyFrameRec[0].rec_yaw;
 }
 
 void resetPelotaElements(void)
@@ -194,6 +244,39 @@ void resetPongElements(void)
 	pong_b_ypos = KeyFramePong[0].pong_b_ypos;
 }
 
+void interpolationRecorrido(void)
+{
+	rec_pos_x_inc = (KeyFrameRec[playIndexRec + 1].rec_pos_x - KeyFrameRec[playIndexRec].rec_pos_x) / i_max_steps;
+	rec_pos_y_inc = (KeyFrameRec[playIndexRec + 1].rec_pos_y - KeyFrameRec[playIndexRec].rec_pos_y) / i_max_steps;
+	rec_pos_z_inc = (KeyFrameRec[playIndexRec + 1].rec_pos_z - KeyFrameRec[playIndexRec].rec_pos_z) / i_max_steps;
+	float curPitch = KeyFrameRec[playIndexRec].rec_pitch;
+	float nextPitch = KeyFrameRec[playIndexRec + 1].rec_pitch;
+	float deltaPitch = nextPitch - curPitch;
+	float curYaw = KeyFrameRec[playIndexRec].rec_yaw;
+	float nextYaw = KeyFrameRec[playIndexRec + 1].rec_yaw;
+	float deltaYaw = nextYaw - curYaw;
+	if (deltaPitch > 180.0f)
+	{
+		deltaPitch = deltaPitch - 360.0f;
+	}
+	else if (deltaPitch < -180.0f)
+	{
+		deltaPitch = deltaPitch + 360.0f;
+	}
+	
+	if (deltaYaw > 180.0f)
+	{
+		deltaYaw = deltaYaw - 360.0f;
+	}
+	else if (deltaYaw < -180.0f)
+	{
+		deltaYaw = deltaYaw + 360.0f;
+	}
+
+	rec_yaw_inc = deltaYaw / i_max_steps;
+	rec_pitch_inc = deltaPitch / i_max_steps;
+}
+
 void interpolationPong(void)
 {
 	pong_l_pos_inc = (KeyFramePong[playIndexPong + 1].pong_l_pos - KeyFramePong[playIndexPong].pong_l_pos) / i_max_steps;
@@ -208,7 +291,6 @@ void interpolationPelota(void)
 	pel_z_inc = (KeyFramePelota[playIndexPelota + 1].pel_z - KeyFramePelota[playIndexPelota].pel_z) / i_max_steps;
 	pel_rot_y_inc = (KeyFramePelota[playIndexPelota + 1].pel_rot_y - KeyFramePelota[playIndexPelota].pel_rot_y) / i_max_steps;
 }
-//bool play = false;
 
 bool robot_correct_angle(float x, float z)
 {
@@ -344,13 +426,58 @@ bool car_correct_position(float x, float z)
 	}
 	return false;
 }
-
+bool play = false;
 void animate(void)
-{		//Para Keyframes (Pong y Pelota)
+{
+		//Keyframes de recorrdio
+		if(play)
+		{
+			if (i_curr_steps_p >= i_max_steps)
+			{
+				std::cout << playIndexRec << std::endl;
+				playIndexRec++;
+				if (playIndexRec > FrameIndexRec - 2)	//end of total animation?
+				{
+					playIndexRec = 0;
+					resetRecorridoElements();
+					interpolationRecorrido();
+					play = false;
+				}
+				else //Next frame interpolations
+				{
+					interpolationRecorrido();
+				}
+				i_curr_steps_p = 0;
+			}
+			else
+			{
+				//Draw animation - Recorrido
+				rec_pos_x += rec_pos_x_inc;
+				rec_pos_y += rec_pos_y_inc;
+				rec_pos_z += rec_pos_z_inc;
+				rec_yaw = fmod(rec_yaw + rec_yaw_inc, 360.0f);
+				if (rec_yaw < 0.0f)
+				{
+					rec_yaw += 360.0f;
+				}
+				rec_pitch += rec_pitch_inc;
+				camera.Position = glm::vec3(rec_pos_x, rec_pos_y, rec_pos_z);
+				camera.Yaw = rec_yaw;
+				camera.Pitch = rec_pitch;
+				camera.updateCameraVectors();
+				i_curr_steps_p++;
+			}
+		}
+		//Para Keyframes (Pong y Pelota)
 		if (i_curr_steps >= i_max_steps) //end of animation between frames?
 		{
 			playIndexPong++;
 			playIndexPelota++;
+			float dx = camera.Position.x - 167.82f;
+			float dy = camera.Position.y - 10.0f;
+			float dz = camera.Position.z - 308.71f;
+			if( ((dx * dx) + (dy * dy) + (dz * dz)) <= 200)
+				SoundEngine->play2D("resources/audio/pong.wav");
 			if (playIndexPong > FrameIndexPong - 2)	//end of total animation?
 			{
 				playIndexPong = 0;
@@ -703,7 +830,8 @@ float map_max_z = 800.0f;
 void drawingGrass()
 {
 	float vertices[] = {
-		// positions          // texture coords
+		// positions
+// texture coords
 		 map_max_x , 0.0f, 0.0f,   map_max_x/3, 0.0f, // top right
 		 map_max_x , 0.0f, map_max_z ,   map_max_x/3, map_max_z/3, // bottom right
 		0.0f, 0.0f, map_max_z ,   0.0f, map_max_z/3, // bottom left
@@ -743,7 +871,8 @@ float pavement_height = 0.2;
 void drawingStreet()
 {
 	float vertices[] = {
-		// positions          // texture coords
+		// positions
+// texture coords
 		 street_left_right,  street_height , map_max_z ,   street_left_right- street_left_left, 0.0f, // north right
 		 street_left_right,   street_height , 0.0f, street_left_right - street_left_left, map_max_z, // south right
 		 street_left_left ,   street_height , 0.0f, 0.0f, map_max_z, // south left
@@ -824,7 +953,8 @@ void drawingStreet()
 void drawingWall()
 {
 	float vertices[] = {
-			// positions          // texture coords
+			// positions
+// texture coords
 			 0.5f,  0.5f, 0.0f,   0.5f, 1.0f, // top right
 			 0.5f, -0.5f, 0.0f,   0.5f, 0.66666f, // bottom right
 			-0.5f, -0.5f, 0.0f,   0.25f, 0.66666f, // bottom left
@@ -900,6 +1030,540 @@ void LoadTextures()
 	t_pavimento = generateTextures("resources/texturas/pavimento.jpg", 0);
 }
 
+void inicializaRecorrido()
+{
+	KeyFrameRec[0].rec_pos_x = 308.603;
+	KeyFrameRec[0].rec_pos_y = 15.5462;
+	KeyFrameRec[0].rec_pos_z = 304.647;
+	KeyFrameRec[0].rec_yaw = 182.3;
+	KeyFrameRec[0].rec_pitch = -14;
+	KeyFrameRec[1].rec_pos_x = 308.603;
+	KeyFrameRec[1].rec_pos_y = 15.5462;
+	KeyFrameRec[1].rec_pos_z = 304.647;
+	KeyFrameRec[1].rec_yaw = 125.6;
+	KeyFrameRec[1].rec_pitch = -9.8;
+	KeyFrameRec[2].rec_pos_x = 308.603;
+	KeyFrameRec[2].rec_pos_y = 15.5462;
+	KeyFrameRec[2].rec_pos_z = 304.647;
+	KeyFrameRec[2].rec_yaw = 75.2;
+	KeyFrameRec[2].rec_pitch = -8.4;
+	KeyFrameRec[3].rec_pos_x = 308.603;
+	KeyFrameRec[3].rec_pos_y = 15.5462;
+	KeyFrameRec[3].rec_pos_z = 304.647;
+	KeyFrameRec[3].rec_yaw = 6.59995;
+	KeyFrameRec[3].rec_pitch = -8.4;
+	KeyFrameRec[4].rec_pos_x = 308.603;
+	KeyFrameRec[4].rec_pos_y = 15.5462;
+	KeyFrameRec[4].rec_pos_z = 304.647;
+	KeyFrameRec[4].rec_yaw = 295.2;
+	KeyFrameRec[4].rec_pitch = -4.9;
+	KeyFrameRec[5].rec_pos_x = 308.603;
+	KeyFrameRec[5].rec_pos_y = 15.5462;
+	KeyFrameRec[5].rec_pos_z = 304.647;
+	KeyFrameRec[5].rec_yaw = 188.8;
+	KeyFrameRec[5].rec_pitch = -9.1;
+	KeyFrameRec[6].rec_pos_x = 293.03;
+	KeyFrameRec[6].rec_pos_y = 6.51898;
+	KeyFrameRec[6].rec_pos_z = 304.539;
+	KeyFrameRec[6].rec_yaw = 188.799;
+	KeyFrameRec[6].rec_pitch = -8.4;
+	KeyFrameRec[7].rec_pos_x = 283.791;
+	KeyFrameRec[7].rec_pos_y = 5.63759;
+	KeyFrameRec[7].rec_pos_z = 306.786;
+	KeyFrameRec[7].rec_yaw = 217.499;
+	KeyFrameRec[7].rec_pitch = -8.4;
+	KeyFrameRec[8].rec_pos_x = 269.396;
+	KeyFrameRec[8].rec_pos_y = 4.84616;
+	KeyFrameRec[8].rec_pos_z = 297.055;
+	KeyFrameRec[8].rec_yaw = 206.299;
+	KeyFrameRec[8].rec_pitch = -4.52995e-06;
+	KeyFrameRec[9].rec_pos_x = 260.024;
+	KeyFrameRec[9].rec_pos_y = 4.88293;
+	KeyFrameRec[9].rec_pos_z = 295.026;
+	KeyFrameRec[9].rec_yaw = 175.499;
+	KeyFrameRec[9].rec_pitch = 0.699995;
+	KeyFrameRec[10].rec_pos_x = 251.942;
+	KeyFrameRec[10].rec_pos_y = 4.98378;
+	KeyFrameRec[10].rec_pos_z = 296.947;
+	KeyFrameRec[10].rec_yaw = 195.099;
+	KeyFrameRec[10].rec_pitch = 2.09999;
+	KeyFrameRec[11].rec_pos_x = 235.827;
+	KeyFrameRec[11].rec_pos_y = 4.25665;
+	KeyFrameRec[11].rec_pos_z = 293.598;
+	KeyFrameRec[11].rec_yaw = 189.499;
+	KeyFrameRec[11].rec_pitch = -3.50001;
+	KeyFrameRec[12].rec_pos_x = 218.364;
+	KeyFrameRec[12].rec_pos_y = 3.70406;
+	KeyFrameRec[12].rec_pos_z = 290.55;
+	KeyFrameRec[12].rec_yaw = 181.799;
+	KeyFrameRec[12].rec_pitch = -3.50001;
+	KeyFrameRec[13].rec_pos_x = 205.266;
+	KeyFrameRec[13].rec_pos_y = 3.81;
+	KeyFrameRec[13].rec_pos_z = 290.952;
+	KeyFrameRec[13].rec_yaw = 181.8;
+	KeyFrameRec[13].rec_pitch = 1.39999;
+	KeyFrameRec[14].rec_pos_x = 205.266;
+	KeyFrameRec[14].rec_pos_y = 3.81;
+	KeyFrameRec[14].rec_pos_z = 290.952;
+	KeyFrameRec[14].rec_yaw = 254.599;
+	KeyFrameRec[14].rec_pitch = -0.700005;
+	KeyFrameRec[15].rec_pos_x = 203.782;
+	KeyFrameRec[15].rec_pos_y = 3.74861;
+	KeyFrameRec[15].rec_pos_z = 286.735;
+	KeyFrameRec[15].rec_yaw = 253.899;
+	KeyFrameRec[15].rec_pitch = -1.4;
+	KeyFrameRec[16].rec_pos_x = 203.782;
+	KeyFrameRec[16].rec_pos_y = 3.74861;
+	KeyFrameRec[16].rec_pos_z = 286.735;
+	KeyFrameRec[16].rec_yaw = 225.199;
+	KeyFrameRec[16].rec_pitch = -4.2;
+	KeyFrameRec[17].rec_pos_x = 203.782;
+	KeyFrameRec[17].rec_pos_y = 3.74861;
+	KeyFrameRec[17].rec_pos_z = 286.735;
+	KeyFrameRec[17].rec_yaw = 225.199;
+	KeyFrameRec[17].rec_pitch = -4.2;
+	KeyFrameRec[18].rec_pos_x = 203.905;
+	KeyFrameRec[18].rec_pos_y = 3.60206;
+	KeyFrameRec[18].rec_pos_z = 284.512;
+	KeyFrameRec[18].rec_yaw = 344.199;
+	KeyFrameRec[18].rec_pitch = 7;
+	KeyFrameRec[19].rec_pos_x = 203.905;
+	KeyFrameRec[19].rec_pos_y = 3.60206;
+	KeyFrameRec[19].rec_pos_z = 284.512;
+	KeyFrameRec[19].rec_yaw = 344.199;
+	KeyFrameRec[19].rec_pitch = 7;
+	KeyFrameRec[20].rec_pos_x = 203.905;
+	KeyFrameRec[20].rec_pos_y = 3.60206;
+	KeyFrameRec[20].rec_pos_z = 284.512;
+	KeyFrameRec[20].rec_yaw = 269.999;
+	KeyFrameRec[20].rec_pitch = -3.5;
+	KeyFrameRec[21].rec_pos_x = 204.131;
+	KeyFrameRec[21].rec_pos_y = 3.15803;
+	KeyFrameRec[21].rec_pos_z = 276.057;
+	KeyFrameRec[21].rec_yaw = 302.199;
+	KeyFrameRec[21].rec_pitch = -3.5;
+	KeyFrameRec[22].rec_pos_x = 204.131;
+	KeyFrameRec[22].rec_pos_y = 3.15803;
+	KeyFrameRec[22].rec_pos_z = 276.057;
+	KeyFrameRec[22].rec_yaw = 232.199;
+	KeyFrameRec[22].rec_pitch = -4.2;
+	KeyFrameRec[23].rec_pos_x = 202.11;
+	KeyFrameRec[23].rec_pos_y = 3.0739;
+	KeyFrameRec[23].rec_pos_z = 273.465;
+	KeyFrameRec[23].rec_yaw = 185.999;
+	KeyFrameRec[23].rec_pitch = -4.2;
+	KeyFrameRec[24].rec_pos_x = 202.11;
+	KeyFrameRec[24].rec_pos_y = 3.0739;
+	KeyFrameRec[24].rec_pos_z = 273.465;
+	KeyFrameRec[24].rec_yaw = 191.599;
+	KeyFrameRec[24].rec_pitch = -2.1;
+	KeyFrameRec[25].rec_pos_x = 202.11;
+	KeyFrameRec[25].rec_pos_y = 3.0739;
+	KeyFrameRec[25].rec_pos_z = 273.465;
+	KeyFrameRec[25].rec_yaw = 59.9995;
+	KeyFrameRec[25].rec_pitch = 1.4;
+	KeyFrameRec[26].rec_pos_x = 206.473;
+	KeyFrameRec[26].rec_pos_y = 3.28366;
+	KeyFrameRec[26].rec_pos_z = 281.641;
+	KeyFrameRec[26].rec_yaw = 190.199;
+	KeyFrameRec[26].rec_pitch = -3.33786e-06;
+	KeyFrameRec[27].rec_pos_x = 198.465;
+	KeyFrameRec[27].rec_pos_y = 2.93813;
+	KeyFrameRec[27].rec_pos_z = 285.747;
+	KeyFrameRec[27].rec_yaw = 249.699;
+	KeyFrameRec[27].rec_pitch = 6.3;
+	KeyFrameRec[28].rec_pos_x = 190.894;
+	KeyFrameRec[28].rec_pos_y = 3.55188;
+	KeyFrameRec[28].rec_pos_z = 281.024;
+	KeyFrameRec[28].rec_yaw = 98.4994;
+	KeyFrameRec[28].rec_pitch = 11.2;
+	KeyFrameRec[29].rec_pos_x = 190.894;
+	KeyFrameRec[29].rec_pos_y = 3.55188;
+	KeyFrameRec[29].rec_pos_z = 281.024;
+	KeyFrameRec[29].rec_yaw = 167.799;
+	KeyFrameRec[29].rec_pitch = 1.4;
+	KeyFrameRec[30].rec_pos_x = 184.84;
+	KeyFrameRec[30].rec_pos_y = 3.70409;
+	KeyFrameRec[30].rec_pos_z = 282.488;
+	KeyFrameRec[30].rec_yaw = 190.199;
+	KeyFrameRec[30].rec_pitch = 1.4;
+	KeyFrameRec[31].rec_pos_x = 184.84;
+	KeyFrameRec[31].rec_pos_y = 3.70409;
+	KeyFrameRec[31].rec_pos_z = 282.488;
+	KeyFrameRec[31].rec_yaw = 190.199;
+	KeyFrameRec[31].rec_pitch = 1.4;
+	KeyFrameRec[32].rec_pos_x = 184.84;
+	KeyFrameRec[32].rec_pos_y = 3.70409;
+	KeyFrameRec[32].rec_pos_z = 282.488;
+	KeyFrameRec[32].rec_yaw = 267.199;
+	KeyFrameRec[32].rec_pitch = -1.4;
+	KeyFrameRec[33].rec_pos_x = 184.84;
+	KeyFrameRec[33].rec_pos_y = 3.70409;
+	KeyFrameRec[33].rec_pos_z = 282.488;
+	KeyFrameRec[33].rec_yaw = 267.199;
+	KeyFrameRec[33].rec_pitch = -1.4;
+	KeyFrameRec[34].rec_pos_x = 182.195;
+	KeyFrameRec[34].rec_pos_y = 3.70483;
+	KeyFrameRec[34].rec_pos_z = 269.286;
+	KeyFrameRec[34].rec_yaw = 142.599;
+	KeyFrameRec[34].rec_pitch = -1.4;
+	KeyFrameRec[35].rec_pos_x = 182.195;
+	KeyFrameRec[35].rec_pos_y = 3.70483;
+	KeyFrameRec[35].rec_pos_z = 269.286;
+	KeyFrameRec[35].rec_yaw = 59.9993;
+	KeyFrameRec[35].rec_pitch = -2.8;
+	KeyFrameRec[36].rec_pos_x = 184.731;
+	KeyFrameRec[36].rec_pos_y = 3.41612;
+	KeyFrameRec[36].rec_pos_z = 280.831;
+	KeyFrameRec[36].rec_yaw = 148.199;
+	KeyFrameRec[36].rec_pitch = -0.700001;
+	KeyFrameRec[37].rec_pos_x = 173.522;
+	KeyFrameRec[37].rec_pos_y = 3.36991;
+	KeyFrameRec[37].rec_pos_z = 289.442;
+	KeyFrameRec[37].rec_yaw = 148.199;
+	KeyFrameRec[37].rec_pitch = -3.5;
+	KeyFrameRec[38].rec_pos_x = 188.811;
+	KeyFrameRec[38].rec_pos_y = 3.60214;
+	KeyFrameRec[38].rec_pos_z = 290.981;
+	KeyFrameRec[38].rec_yaw = 92.1993;
+	KeyFrameRec[38].rec_pitch = 1.4;
+	KeyFrameRec[39].rec_pos_x = 190.739;
+	KeyFrameRec[39].rec_pos_y = 3.43471;
+	KeyFrameRec[39].rec_pos_z = 296.979;
+	KeyFrameRec[39].rec_yaw = 13.7993;
+	KeyFrameRec[39].rec_pitch = -3.5;
+	KeyFrameRec[40].rec_pos_x = 190.739;
+	KeyFrameRec[40].rec_pos_y = 3.43471;
+	KeyFrameRec[40].rec_pos_z = 296.979;
+	KeyFrameRec[40].rec_yaw = 13.7993;
+	KeyFrameRec[40].rec_pitch = -3.5;
+	KeyFrameRec[41].rec_pos_x = 201.788;
+	KeyFrameRec[41].rec_pos_y = 3.66151;
+	KeyFrameRec[41].rec_pos_z = 303.089;
+	KeyFrameRec[41].rec_yaw = 275.099;
+	KeyFrameRec[41].rec_pitch = -16.8;
+	KeyFrameRec[42].rec_pos_x = 201.788;
+	KeyFrameRec[42].rec_pos_y = 3.66151;
+	KeyFrameRec[42].rec_pos_z = 303.089;
+	KeyFrameRec[42].rec_yaw = 329.699;
+	KeyFrameRec[42].rec_pitch = -14.7;
+	KeyFrameRec[43].rec_pos_x = 201.788;
+	KeyFrameRec[43].rec_pos_y = 3.66151;
+	KeyFrameRec[43].rec_pos_z = 303.089;
+	KeyFrameRec[43].rec_yaw = 164.999;
+	KeyFrameRec[43].rec_pitch = -21;
+	KeyFrameRec[44].rec_pos_x = 201.788;
+	KeyFrameRec[44].rec_pos_y = 3.66151;
+	KeyFrameRec[44].rec_pos_z = 303.089;
+	KeyFrameRec[44].rec_yaw = 100.599;
+	KeyFrameRec[44].rec_pitch = -33.6;
+	KeyFrameRec[45].rec_pos_x = 201.788;
+	KeyFrameRec[45].rec_pos_y = 3.66151;
+	KeyFrameRec[45].rec_pos_z = 303.089;
+	KeyFrameRec[45].rec_yaw = 354.199;
+	KeyFrameRec[45].rec_pitch = -1.4;
+	KeyFrameRec[46].rec_pos_x = 205.363;
+	KeyFrameRec[46].rec_pos_y = 3.69759;
+	KeyFrameRec[46].rec_pos_z = 304.404;
+	KeyFrameRec[46].rec_yaw = 89.3994;
+	KeyFrameRec[46].rec_pitch = 1.4;
+	KeyFrameRec[47].rec_pos_x = 205.316;
+	KeyFrameRec[47].rec_pos_y = 3.75275;
+	KeyFrameRec[47].rec_pos_z = 309.244;
+	KeyFrameRec[47].rec_yaw = 132.099;
+	KeyFrameRec[47].rec_pitch = -17.5;
+	KeyFrameRec[48].rec_pos_x = 205.316;
+	KeyFrameRec[48].rec_pos_y = 3.75275;
+	KeyFrameRec[48].rec_pos_z = 309.244;
+	KeyFrameRec[48].rec_yaw = 131.399;
+	KeyFrameRec[48].rec_pitch = -16.8;
+	KeyFrameRec[49].rec_pos_x = 205.316;
+	KeyFrameRec[49].rec_pos_y = 3.75275;
+	KeyFrameRec[49].rec_pos_z = 309.244;
+	KeyFrameRec[49].rec_yaw = 174.099;
+	KeyFrameRec[49].rec_pitch = 2.1;
+	KeyFrameRec[50].rec_pos_x = 195.308;
+	KeyFrameRec[50].rec_pos_y = 4.05677;
+	KeyFrameRec[50].rec_pos_z = 309.753;
+	KeyFrameRec[50].rec_yaw = 110.399;
+	KeyFrameRec[50].rec_pitch = 2.1;
+	KeyFrameRec[51].rec_pos_x = 195.308;
+	KeyFrameRec[51].rec_pos_y = 4.05677;
+	KeyFrameRec[51].rec_pos_z = 309.753;
+	KeyFrameRec[51].rec_yaw = 112.499;
+	KeyFrameRec[51].rec_pitch = 34.3;
+	KeyFrameRec[52].rec_pos_x = 195.308;
+	KeyFrameRec[52].rec_pos_y = 4.05677;
+	KeyFrameRec[52].rec_pos_z = 309.753;
+	KeyFrameRec[52].rec_yaw = 108.299;
+	KeyFrameRec[52].rec_pitch = 0.699997;
+	KeyFrameRec[53].rec_pos_x = 195.308;
+	KeyFrameRec[53].rec_pos_y = 4.05677;
+	KeyFrameRec[53].rec_pos_z = 309.753;
+	KeyFrameRec[53].rec_yaw = 5.39932;
+	KeyFrameRec[53].rec_pitch = -7;
+	KeyFrameRec[54].rec_pos_x = 205.133;
+	KeyFrameRec[54].rec_pos_y = 3.17572;
+	KeyFrameRec[54].rec_pos_z = 309.503;
+	KeyFrameRec[54].rec_yaw = 275.099;
+	KeyFrameRec[54].rec_pitch = -9.8;
+	KeyFrameRec[55].rec_pos_x = 204.977;
+	KeyFrameRec[55].rec_pos_y = 3.35947;
+	KeyFrameRec[55].rec_pos_z = 301.832;
+	KeyFrameRec[55].rec_yaw = 353.499;
+	KeyFrameRec[55].rec_pitch = 3.5;
+	KeyFrameRec[56].rec_pos_x = 193.57;
+	KeyFrameRec[56].rec_pos_y = 3.38388;
+	KeyFrameRec[56].rec_pos_z = 297.811;
+	KeyFrameRec[56].rec_yaw = 184.799;
+	KeyFrameRec[56].rec_pitch = -4.29153e-06;
+	KeyFrameRec[57].rec_pos_x = 188.468;
+	KeyFrameRec[57].rec_pos_y = 3.13406;
+	KeyFrameRec[57].rec_pos_z = 297.568;
+	KeyFrameRec[57].rec_yaw = 186.899;
+	KeyFrameRec[57].rec_pitch = -2.79988;
+	KeyFrameRec[58].rec_pos_x = 188.468;
+	KeyFrameRec[58].rec_pos_y = 3.13406;
+	KeyFrameRec[58].rec_pos_z = 297.568;
+	KeyFrameRec[58].rec_yaw = 186.899;
+	KeyFrameRec[58].rec_pitch = -2.79988;
+	KeyFrameRec[59].rec_pos_x = 179.621;
+	KeyFrameRec[59].rec_pos_y = 2.66527;
+	KeyFrameRec[59].rec_pos_z = 298.126;
+	KeyFrameRec[59].rec_yaw = 188.999;
+	KeyFrameRec[59].rec_pitch = -14.6999;
+	KeyFrameRec[60].rec_pos_x = 177.417;
+	KeyFrameRec[60].rec_pos_y = 3.17863;
+	KeyFrameRec[60].rec_pos_z = 299.107;
+	KeyFrameRec[60].rec_yaw = 312.899;
+	KeyFrameRec[60].rec_pitch = -15.3999;
+	KeyFrameRec[61].rec_pos_x = 182.509;
+	KeyFrameRec[61].rec_pos_y = 3.0809;
+	KeyFrameRec[61].rec_pos_z = 296.509;
+	KeyFrameRec[61].rec_yaw = 20.7994;
+	KeyFrameRec[61].rec_pitch = -4.89988;
+	KeyFrameRec[62].rec_pos_x = 189.191;
+	KeyFrameRec[62].rec_pos_y = 3.16561;
+	KeyFrameRec[62].rec_pos_z = 298.349;
+	KeyFrameRec[62].rec_yaw = 97.0994;
+	KeyFrameRec[62].rec_pitch = -4.89988;
+	KeyFrameRec[63].rec_pos_x = 188.963;
+	KeyFrameRec[63].rec_pos_y = 3.1836;
+	KeyFrameRec[63].rec_pos_z = 304.063;
+	KeyFrameRec[63].rec_yaw = 182.499;
+	KeyFrameRec[63].rec_pitch = -9.79988;
+	KeyFrameRec[64].rec_pos_x = 185.127;
+	KeyFrameRec[64].rec_pos_y = 2.99206;
+	KeyFrameRec[64].rec_pos_z = 304.157;
+	KeyFrameRec[64].rec_yaw = 225.199;
+	KeyFrameRec[64].rec_pitch = -37.7999;
+	KeyFrameRec[65].rec_pos_x = 182.693;
+	KeyFrameRec[65].rec_pos_y = 3.19221;
+	KeyFrameRec[65].rec_pos_z = 302.694;
+	KeyFrameRec[65].rec_yaw = 102.699;
+	KeyFrameRec[65].rec_pitch = -19.5999;
+	KeyFrameRec[66].rec_pos_x = 180.624;
+	KeyFrameRec[66].rec_pos_y = 3.25358;
+	KeyFrameRec[66].rec_pos_z = 302.308;
+	KeyFrameRec[66].rec_yaw = 186.699;
+	KeyFrameRec[66].rec_pitch = 47.6001;
+	KeyFrameRec[67].rec_pos_x = 178.503;
+	KeyFrameRec[67].rec_pos_y = 3.16709;
+	KeyFrameRec[67].rec_pos_z = 302.213;
+	KeyFrameRec[67].rec_yaw = 98.4995;
+	KeyFrameRec[67].rec_pitch = 4.90012;
+	KeyFrameRec[68].rec_pos_x = 178.503;
+	KeyFrameRec[68].rec_pos_y = 3.16709;
+	KeyFrameRec[68].rec_pos_z = 302.213;
+	KeyFrameRec[68].rec_yaw = 14.4995;
+	KeyFrameRec[68].rec_pitch = -18.8999;
+	KeyFrameRec[69].rec_pos_x = 188.24;
+	KeyFrameRec[69].rec_pos_y = 3.36987;
+	KeyFrameRec[69].rec_pos_z = 304.515;
+	KeyFrameRec[69].rec_yaw = 85.8995;
+	KeyFrameRec[69].rec_pitch = 1.40013;
+	KeyFrameRec[70].rec_pos_x = 189.033;
+	KeyFrameRec[70].rec_pos_y = 3.59676;
+	KeyFrameRec[70].rec_pos_z = 313.068;
+	KeyFrameRec[70].rec_yaw = 85.1995;
+	KeyFrameRec[70].rec_pitch = 1.40013;
+	KeyFrameRec[71].rec_pos_x = 187.699;
+	KeyFrameRec[71].rec_pos_y = 3.49774;
+	KeyFrameRec[71].rec_pos_z = 312.672;
+	KeyFrameRec[71].rec_yaw = 209.099;
+	KeyFrameRec[71].rec_pitch = -2.79988;
+	KeyFrameRec[72].rec_pos_x = 184.904;
+	KeyFrameRec[72].rec_pos_y = 3.35188;
+	KeyFrameRec[72].rec_pos_z = 311.584;
+	KeyFrameRec[72].rec_yaw = 180.4;
+	KeyFrameRec[72].rec_pitch = -5.59988;
+	KeyFrameRec[73].rec_pos_x = 184.904;
+	KeyFrameRec[73].rec_pos_y = 3.35188;
+	KeyFrameRec[73].rec_pos_z = 311.584;
+	KeyFrameRec[73].rec_yaw = 142.6;
+	KeyFrameRec[73].rec_pitch = 14.0001;
+	KeyFrameRec[74].rec_pos_x = 184.904;
+	KeyFrameRec[74].rec_pos_y = 3.35188;
+	KeyFrameRec[74].rec_pos_z = 311.584;
+	KeyFrameRec[74].rec_yaw = 17.9995;
+	KeyFrameRec[74].rec_pitch = -2.79987;
+	KeyFrameRec[75].rec_pos_x = 188.779;
+	KeyFrameRec[75].rec_pos_y = 3.43;
+	KeyFrameRec[75].rec_pos_z = 312.722;
+	KeyFrameRec[75].rec_yaw = 92.1995;
+	KeyFrameRec[75].rec_pitch = -0.699875;
+	KeyFrameRec[76].rec_pos_x = 188.779;
+	KeyFrameRec[76].rec_pos_y = 3.43;
+	KeyFrameRec[76].rec_pos_z = 312.722;
+	KeyFrameRec[76].rec_yaw = 92.1995;
+	KeyFrameRec[76].rec_pitch = -0.699875;
+	KeyFrameRec[77].rec_pos_x = 189.258;
+	KeyFrameRec[77].rec_pos_y = 3.53116;
+	KeyFrameRec[77].rec_pos_z = 291.794;
+	KeyFrameRec[77].rec_yaw = 184.8;
+	KeyFrameRec[77].rec_pitch = -2.09987;
+	KeyFrameRec[78].rec_pos_x = 163.205;
+	KeyFrameRec[78].rec_pos_y = 3.82612;
+	KeyFrameRec[78].rec_pos_z = 290.736;
+	KeyFrameRec[78].rec_yaw = 116.2;
+	KeyFrameRec[78].rec_pitch = -0.699875;
+	KeyFrameRec[79].rec_pos_x = 153.418;
+	KeyFrameRec[79].rec_pos_y = 3.70826;
+	KeyFrameRec[79].rec_pos_z = 297.689;
+	KeyFrameRec[79].rec_yaw = 86.0996;
+	KeyFrameRec[79].rec_pitch = -4.19987;
+	KeyFrameRec[80].rec_pos_x = 153.418;
+	KeyFrameRec[80].rec_pos_y = 3.70826;
+	KeyFrameRec[80].rec_pos_z = 297.689;
+	KeyFrameRec[80].rec_yaw = 86.0996;
+	KeyFrameRec[80].rec_pitch = -4.19987;
+	KeyFrameRec[81].rec_pos_x = 153.418;
+	KeyFrameRec[81].rec_pos_y = 3.70826;
+	KeyFrameRec[81].rec_pos_z = 297.689;
+	KeyFrameRec[81].rec_yaw = 35.6996;
+	KeyFrameRec[81].rec_pitch = 3.50013;
+	KeyFrameRec[82].rec_pos_x = 164.463;
+	KeyFrameRec[82].rec_pos_y = 3.7834;
+	KeyFrameRec[82].rec_pos_z = 303.705;
+	KeyFrameRec[82].rec_yaw = 63.6996;
+	KeyFrameRec[82].rec_pitch = 7.00013;
+	KeyFrameRec[83].rec_pos_x = 169.95;
+	KeyFrameRec[83].rec_pos_y = 3.77711;
+	KeyFrameRec[83].rec_pos_z = 304.73;
+	KeyFrameRec[83].rec_yaw = 45.4996;
+	KeyFrameRec[83].rec_pitch = -25.1999;
+	KeyFrameRec[84].rec_pos_x = 171.517;
+	KeyFrameRec[84].rec_pos_y = 3.39549;
+	KeyFrameRec[84].rec_pos_z = 304.808;
+	KeyFrameRec[84].rec_yaw = 315.2;
+	KeyFrameRec[84].rec_pitch = -27.2999;
+	KeyFrameRec[85].rec_pos_x = 171.517;
+	KeyFrameRec[85].rec_pos_y = 3.39549;
+	KeyFrameRec[85].rec_pos_z = 304.808;
+	KeyFrameRec[85].rec_yaw = 198.3;
+	KeyFrameRec[85].rec_pitch = 2.10013;
+	KeyFrameRec[86].rec_pos_x = 163.603;
+	KeyFrameRec[86].rec_pos_y = 3.44037;
+	KeyFrameRec[86].rec_pos_z = 304.047;
+	KeyFrameRec[86].rec_yaw = 243.1;
+	KeyFrameRec[86].rec_pitch = -1.39987;
+	KeyFrameRec[87].rec_pos_x = 155.388;
+	KeyFrameRec[87].rec_pos_y = 3.4837;
+	KeyFrameRec[87].rec_pos_z = 288.574;
+	KeyFrameRec[87].rec_yaw = 295.6;
+	KeyFrameRec[87].rec_pitch = 1.40013;
+	KeyFrameRec[88].rec_pos_x = 158.336;
+	KeyFrameRec[88].rec_pos_y = 3.60168;
+	KeyFrameRec[88].rec_pos_z = 282.319;
+	KeyFrameRec[88].rec_yaw = 243.1;
+	KeyFrameRec[88].rec_pitch = -0.699875;
+	KeyFrameRec[89].rec_pos_x = 158.336;
+	KeyFrameRec[89].rec_pos_y = 3.60168;
+	KeyFrameRec[89].rec_pos_z = 282.319;
+	KeyFrameRec[89].rec_yaw = 202.5;
+	KeyFrameRec[89].rec_pitch = -0.699875;
+	KeyFrameRec[90].rec_pos_x = 158.336;
+	KeyFrameRec[90].rec_pos_y = 3.60168;
+	KeyFrameRec[90].rec_pos_z = 282.319;
+	KeyFrameRec[90].rec_yaw = 202.5;
+	KeyFrameRec[90].rec_pitch = -2.09987;
+	KeyFrameRec[91].rec_pos_x = 158.336;
+	KeyFrameRec[91].rec_pos_y = 3.60168;
+	KeyFrameRec[91].rec_pos_z = 282.319;
+	KeyFrameRec[91].rec_yaw = 124.1;
+	KeyFrameRec[91].rec_pitch = -1.39987;
+	KeyFrameRec[92].rec_pos_x = 153.084;
+	KeyFrameRec[92].rec_pos_y = 3.6513;
+	KeyFrameRec[92].rec_pos_z = 293.926;
+	KeyFrameRec[92].rec_yaw = 138.1;
+	KeyFrameRec[92].rec_pitch = -2.09987;
+	KeyFrameRec[93].rec_pos_x = 147.066;
+	KeyFrameRec[93].rec_pos_y = 3.58375;
+	KeyFrameRec[93].rec_pos_z = 298.479;
+	KeyFrameRec[93].rec_yaw = 162.6;
+	KeyFrameRec[93].rec_pitch = -0.699875;
+	KeyFrameRec[94].rec_pos_x = 135.291;
+	KeyFrameRec[94].rec_pos_y = 4.2884;
+	KeyFrameRec[94].rec_pos_z = 303.133;
+	KeyFrameRec[94].rec_yaw = 232.6;
+	KeyFrameRec[94].rec_pitch = -0.699874;
+	KeyFrameRec[95].rec_pos_x = 135.291;
+	KeyFrameRec[95].rec_pos_y = 4.2884;
+	KeyFrameRec[95].rec_pos_z = 303.133;
+	KeyFrameRec[95].rec_yaw = 232.6;
+	KeyFrameRec[95].rec_pitch = -0.699874;
+	KeyFrameRec[96].rec_pos_x = 127.395;
+	KeyFrameRec[96].rec_pos_y = 6.21994;
+	KeyFrameRec[96].rec_pos_z = 307.834;
+	KeyFrameRec[96].rec_yaw = 146.5;
+	KeyFrameRec[96].rec_pitch = -20.2999;
+	KeyFrameRec[97].rec_pos_x = 127.395;
+	KeyFrameRec[97].rec_pos_y = 6.21994;
+	KeyFrameRec[97].rec_pos_z = 307.834;
+	KeyFrameRec[97].rec_yaw = 146.5;
+	KeyFrameRec[97].rec_pitch = -20.2999;
+	KeyFrameRec[98].rec_pos_x = 127.395;
+	KeyFrameRec[98].rec_pos_y = 6.21994;
+	KeyFrameRec[98].rec_pos_z = 307.834;
+	KeyFrameRec[98].rec_yaw = 54.0995;
+	KeyFrameRec[98].rec_pitch = -2.09987;
+	KeyFrameRec[99].rec_pos_x = 148.514;
+	KeyFrameRec[99].rec_pos_y = 5.42969;
+	KeyFrameRec[99].rec_pos_z = 323.169;
+	KeyFrameRec[99].rec_yaw = 41.4995;
+	KeyFrameRec[99].rec_pitch = -3.49987;
+	KeyFrameRec[100].rec_pos_x = 155.361;
+	KeyFrameRec[100].rec_pos_y = 5.5376;
+	KeyFrameRec[100].rec_pos_z = 323.732;
+	KeyFrameRec[100].rec_yaw = 284.6;
+	KeyFrameRec[100].rec_pitch = -2.09987;
+	KeyFrameRec[101].rec_pos_x = 176.518;
+	KeyFrameRec[101].rec_pos_y = 5.18564;
+	KeyFrameRec[101].rec_pos_z = 321.891;
+	KeyFrameRec[101].rec_yaw = 288.799;
+	KeyFrameRec[101].rec_pitch = -5.59987;
+	KeyFrameRec[102].rec_pos_x = 189.168;
+	KeyFrameRec[102].rec_pos_y = 5.26016;
+	KeyFrameRec[102].rec_pos_z = 320.787;
+	KeyFrameRec[102].rec_yaw = 275.5;
+	KeyFrameRec[102].rec_pitch = -8.39987;
+	KeyFrameRec[103].rec_pos_x = 205.93;
+	KeyFrameRec[103].rec_pos_y = 3.768;
+	KeyFrameRec[103].rec_pos_z = 318.372;
+	KeyFrameRec[103].rec_yaw = 354.802;
+	KeyFrameRec[103].rec_pitch = 2;
+	KeyFrameRec[104].rec_pos_x = 229.826;
+	KeyFrameRec[104].rec_pos_y = 8.14363;
+	KeyFrameRec[104].rec_pos_z = 310.252;
+	KeyFrameRec[104].rec_yaw = 339.402;
+	KeyFrameRec[104].rec_pitch = 9.7;
+	KeyFrameRec[105].rec_pos_x = 288.484;
+	KeyFrameRec[105].rec_pos_y = 2.91798;
+	KeyFrameRec[105].rec_pos_z = 305.052;
+	KeyFrameRec[105].rec_yaw = 186.602;
+	KeyFrameRec[105].rec_pitch = 0.599999;
+	FrameIndexRec = 106;
+}
 
 int main()
 {
@@ -1119,6 +1783,13 @@ int main()
 	playIndexPelota = 0;
 	//Inicializo timer de keyframes
 	i_curr_steps = 0;
+	//Inicializo timer de keyframes activables
+	i_curr_steps_p = 0;
+	//Inicializo frames para Recorrido
+	inicializaRecorrido();
+
+	//Inicializo la musica de fondo.
+	SoundEngine->play2D("resources/audio/viv.mp3", true);
 	// render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
@@ -1332,13 +2003,41 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	{
 		camera.ProcessKeyboard(FORWARD, (float)deltaTime * speedMultiplier);
+		playIndexRec = 0;
+		resetRecorridoElements();
+		interpolationRecorrido();
+		play = false;
+	}
+		
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	{
 		camera.ProcessKeyboard(BACKWARD, (float)deltaTime * speedMultiplier);
+		playIndexRec = 0;
+		resetRecorridoElements();
+		interpolationRecorrido();
+		play = false;
+	}
+		
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	{
 		camera.ProcessKeyboard(LEFT, (float)deltaTime * speedMultiplier);
+		playIndexRec = 0;
+		resetRecorridoElements();
+		interpolationRecorrido();
+		play = false;
+	}
+		
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	{
 		camera.ProcessKeyboard(RIGHT, (float)deltaTime * speedMultiplier);
+		playIndexRec = 0;
+		resetRecorridoElements();
+		interpolationRecorrido();
+		play = false;
+	}
+		
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 		speedMultiplier *= 2;
 	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
@@ -1367,34 +2066,34 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		std::cout << "POSZ: " << camera.Position.z << std::endl;*/
 		std::cout << "(" << camera.Position.x << ", " << camera.Position.z << ");" << std::endl;
 	}
-	//if (key == GLFW_KEY_P && action == GLFW_PRESS)
-	//{
-	//	if (play == false && (FrameIndexPelota > 1))
-	//	{
-	//		std::cout << "Play animation" << std::endl;
-	//		resetPelotaElements();
-	//		//First Interpolation				
-	//		interpolationPelota();
+	if (key == GLFW_KEY_P && action == GLFW_PRESS)
+	{
+		if (play == false && (FrameIndexRec > 1))
+		{
+			std::cout << "Play animation" << std::endl;
+			resetRecorridoElements();
+			//First Interpolation				
+			interpolationRecorrido();
 
-	//		play = true;
-	//		playIndexPelota = 0;
-	//		i_curr_steps = 0;
-	//	}
-	//	else
-	//	{
-	//		play = false;
-	//		std::cout << "Not enough Key Frames" << std::endl;
-	//	}
-	//}
+			play = true;
+			playIndexRec = 0;
+			i_curr_steps_p = 0;
+		}
+		else
+		{
+			play = false;
+			std::cout << "Not enough Key Frames" << std::endl;
+		}
+	}
 
-	////To Save a KeyFramePong
-	//if (key == GLFW_KEY_L && action == GLFW_PRESS)
-	//{
-	//	if (FrameIndexPelota < MAX_FRAMES_PELOTA)
-	//	{
-	//		saveFrame();
-	//	}
-	//}
+	//To Save a KeyFramePong
+	if (key == GLFW_KEY_L && action == GLFW_PRESS)
+	{
+		if (FrameIndexRec < MAX_FRAMES_RECORRIDO)
+		{
+			saveFrame();
+		}
+	}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -1410,20 +2109,23 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (firstMouse)
+	if(!play)
 	{
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+
+		float xoffset = xpos - lastX;
+		float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
 		lastX = xpos;
 		lastY = ypos;
-		firstMouse = false;
+
+		camera.ProcessMouseMovement(xoffset, yoffset);
 	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-	lastX = xpos;
-	lastY = ypos;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
 }
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------

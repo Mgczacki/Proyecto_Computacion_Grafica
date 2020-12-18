@@ -90,7 +90,12 @@ public:
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
 
-        Yaw   += xoffset;
+        Yaw = fmod(Yaw + xoffset, 360.0f);
+        if(Yaw < 0.0f)
+        {
+            Yaw += 360.0f;
+        }
+
         Pitch += yoffset;
 
         // Make sure that when pitch is out of bounds, screen doesn't get flipped
@@ -116,8 +121,8 @@ public:
         if (Zoom >= 45.0f)
             Zoom = 45.0f;
     }
-
-private:
+//Quito el identificador privado para poder hacer los cambios necesarios... no abusaré.
+//private:
     // Calculates the front vector from the Camera's (updated) Euler Angles
     void updateCameraVectors()
     {
