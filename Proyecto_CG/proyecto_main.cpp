@@ -662,8 +662,8 @@ float street_left_left = 290.0f;
 float street_left_right = 302.0f;
 float street_right_left = 334.0f;
 float street_right_right = 346.f;
-float street_height = 0.2;
-float pavement_height = 0.1;
+float street_height = 0.3;
+float pavement_height = 0.2;
 void drawingStreet()
 {
 	float vertices[] = {
