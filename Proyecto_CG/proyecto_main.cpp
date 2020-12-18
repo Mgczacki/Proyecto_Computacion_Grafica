@@ -208,7 +208,7 @@ void interpolationPelota(void)
 	pel_z_inc = (KeyFramePelota[playIndexPelota + 1].pel_z - KeyFramePelota[playIndexPelota].pel_z) / i_max_steps;
 	pel_rot_y_inc = (KeyFramePelota[playIndexPelota + 1].pel_rot_y - KeyFramePelota[playIndexPelota].pel_rot_y) / i_max_steps;
 }
-bool play = false;
+//bool play = false;
 
 bool robot_correct_angle(float x, float z)
 {
@@ -275,6 +275,12 @@ int plane_state = 0;
 int robot_state = -1;
 
 float radius = 20.0f;
+
+//Para animacion del carro
+float	movAuto_x = 0.0f,
+movAuto_z = 0.0f,
+orienta = 0.0f,
+rot_llanta = 0.0f;
 
 void animate(void)
 {		//Para Keyframes (Pong y Pelota)
@@ -575,7 +581,12 @@ void animate(void)
 			}
 			break;
 		}
-
+		//Para el carro
+		rot_llanta += 60.0f;
+		if (rot_llanta >= 360.0f)
+		{
+			rot_llanta = 0.0f;
+		}
 }
 
 unsigned int generateTextures(const char* filename, bool alfa)
@@ -903,6 +914,9 @@ int main()
 	Model robot("resources/objects/robot/robot.obj");
 	Model robot_rotor_izq("resources/objects/robot/rotor_left.obj");
 	Model robot_rotor_der("resources/objects/robot/rotor_right.obj");
+	//Para animación del carro.
+	Model carro("resources/objects/lambo/carroceria.obj");
+	Model llanta("resources/objects/lambo/Wheel.obj");
 	//Cargando texturas
 
 	LoadTextures();
@@ -1149,6 +1163,39 @@ int main()
 		tmp = glm::rotate(tmp, glm::radians(rotor_rotacion), glm::vec3(0.0f, 1.0f, 0.0f));
 		staticShader.setMat4("model", tmp);
 		robot_rotor_der.Draw(staticShader);
+		//Animacion 5: Carro
+		model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::translate(model, glm::vec3(15.0f + movAuto_x, -1.0f, movAuto_z));
+		tmp = model = glm::rotate(model, glm::radians(orienta), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		staticShader.setMat4("model", model);
+		carro.Draw(staticShader);
+
+		model = glm::translate(tmp, glm::vec3(8.5f, 3.5f, 12.9f));
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::rotate(model, glm::radians(-rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
+		staticShader.setMat4("model", model);
+		llanta.Draw(staticShader);	//Izq delantera
+
+		model = glm::translate(tmp, glm::vec3(-8.5f, 3.5f, 12.9f));
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
+		staticShader.setMat4("model", model);
+		llanta.Draw(staticShader);	//Der delantera
+
+		model = glm::translate(tmp, glm::vec3(-8.5f, 4.0f, -14.5f));
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, glm::radians(rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
+		staticShader.setMat4("model", model);
+		llanta.Draw(staticShader);	//Der trasera
+
+		model = glm::translate(tmp, glm::vec3(8.5f, 4.0f, -14.5f));
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::rotate(model, glm::radians(-rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
+		staticShader.setMat4("model", model);
+		llanta.Draw(staticShader);	//Izq trase
 		// draw skybox as last
 		// -------------------
 
@@ -1221,7 +1268,7 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		speedMultiplier /= 2;
 	//PARA PONG
-	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+	/*if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
 		pel_x += 0.1f;
 	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
 		pel_x -= 0.1f;
@@ -1236,12 +1283,13 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 	if (glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS)
 		pel_rot_y += 0.1f;
 	if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS)
-		pel_rot_y -= 0.1f;
+		pel_rot_y -= 0.1f;*/
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 	{
-		std::cout << "POSX: " << camera.Position.x << std::endl;
+		/*std::cout << "POSX: " << camera.Position.x << std::endl;
 		std::cout << "POSY: " << camera.Position.y << std::endl;
-		std::cout << "POSZ: " << camera.Position.z << std::endl;
+		std::cout << "POSZ: " << camera.Position.z << std::endl;*/
+		std::cout << "(" << camera.Position.x << ", " << camera.Position.z << ");" << std::endl;
 	}
 	//if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	//{
