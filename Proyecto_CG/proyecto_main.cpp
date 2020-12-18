@@ -1,10 +1,11 @@
-/*---------------------------------------------------------*/
+﻿/*---------------------------------------------------------*/
 /* ---------------   Proyecto Final  ----------------------*/
 /*------------------    2021-1   --------------------------*/
 /*-------- Alumno: Mario Horacio Garrido Czacki -----------*/
 #include <Windows.h>
 
 #include <iostream>
+#include <cmath>
 #include <fstream>
 #include <string>
 
@@ -29,6 +30,28 @@
 #include <model.h>
 #include <Skybox.h>
 
+
+//Utilidad para obtener el ángulo absoluto de un vector en un plano 2D.
+constexpr float radToDeg(float rad) { return rad * (180.0f / M_PI); }
+constexpr float degToRad(float deg) { return deg * (M_PI / 180.0f); }
+float vectorAngle(float x, float y) {
+	if (x == 0.0f) // special cases
+		return (y > 0.0f) ? 90.0f
+		: (y == 0.0f) ? 0.0f
+		: 270.0f;
+	else if (y == 0.0f) // special cases
+		return (x >= 0.0f) ? 0.0f
+		: 180.0f;
+	float ret = radToDeg(atanf((float)y / x));
+	if (x < 0.0f && y < 0.0f) // quadrant Ⅲ
+		ret = 180.0f + ret;
+	else if (x < 0.0f) // quadrant Ⅱ
+		ret = 180.0f + ret; // it actually substracts
+	else if (y < 0.0f) // quadrant Ⅳ
+		ret = 270.0f + (90.0f + ret); // it actually substracts
+	return ret;
+}
+//Código obtenido de https://stackoverflow.com/questions/6247153/angle-from-2d-unit-vector
 
 //#pragma comment(lib, "winmm.lib")
 
@@ -68,6 +91,9 @@ unsigned int	t_pasto,
 
 //Mapa
 float mapscale = 1.0f;
+
+//Variables para animacion
+float rotor_rotacion = 0.0f;
 
 // KeyFrame para Pong
 float	pong_l_pos = 0.0f,
@@ -127,6 +153,17 @@ int playIndexPelota = 0;
 Frame Index = 0                                                                                                                                                                                      KeyFramePong[0].pong_l_pos = 2.9;                                                                                                                                                                        KeyFramePong[0].pong_r_pos = 0;                                                                                                                                                                          KeyFramePong[0].pong_b_xpos = -0.5;                                                                                                                                                                      KeyFramePong[0].pong_b_ypos = 0;                                                                                                                                                                         Frame Index = 1                                                                                                                                                                                      KeyFramePong[1].pong_l_pos = 8.7;                                                                                                                                                                        KeyFramePong[1].pong_r_pos = 2.5;                                                                                                                                                                        KeyFramePong[1].pong_b_xpos = 15.5;                                                                                                                                                                      KeyFramePong[1].pong_b_ypos = 8.8;                                                                                                                                                                       Frame Index = 2                                                                                                                                                                                      KeyFramePong[2].pong_l_pos = 5.4;                                                                                                                                                                        KeyFramePong[2].pong_r_pos = 5.7;                                                                                                                                                                        KeyFramePong[2].pong_b_xpos = -0.5;                                                                                                                                                                      KeyFramePong[2].pong_b_ypos = 6.5;                                                                                                                                                                       Frame Index = 3                                                                                                                                                                                      KeyFramePong[3].pong_l_pos = -0.0999999;                                                                                                                                                                 KeyFramePong[3].pong_r_pos = 3.8;                                                                                                                                                                        KeyFramePong[3].pong_b_xpos = 15.5;                                                                                                                                                                      KeyFramePong[3].pong_b_ypos = -0.0999999;
 */
 
+//Animación robot
+float robot_pos_x = 204.127f,
+robot_pos_z = 290.874f,
+robot_rot_y = 0.0f;
+
+//Animación avión
+float avion_pos_x = 0.0f,
+	avion_pos_y = 0.0f,
+	avion_pos_z = 0.0f,
+	avion_rot = 0.0f;
+
 void saveFrame(void)
 {
 	//printf("frameindex %d\n", FrameIndex);
@@ -172,8 +209,75 @@ void interpolationPelota(void)
 	pel_rot_y_inc = (KeyFramePelota[playIndexPelota + 1].pel_rot_y - KeyFramePelota[playIndexPelota].pel_rot_y) / i_max_steps;
 }
 bool play = false;
+
+bool robot_correct_angle(float x, float z)
+{
+	float inc = 5.0f;//5 grados de rotacion
+	float deltax = x - robot_pos_x;
+	float deltaz = z - robot_pos_z;
+	float target_angle = vectorAngle(-deltax, deltaz);
+	float delta_angle = robot_rot_y - target_angle;
+	if (delta_angle == 0.0f)
+		return true;
+	//No esta en el angulo correcto.
+	//Correccion de direccion de giro
+	//Generamos la rotacion en si
+	//Correccion de direccion de giro
+	if (delta_angle > 180.0f)
+	{
+		delta_angle = delta_angle - 360.0f;
+	}
+	else if (delta_angle < -180.0f)
+	{
+		delta_angle = delta_angle + 360.0f;
+	}
+	if (abs(delta_angle) <= inc)
+	{
+		robot_rot_y = target_angle;
+		//std::cout << "Reached target angle " << target_angle << std::endl;
+	}
+	else if (delta_angle < 0)
+	{
+		robot_rot_y += inc;
+	}
+	else
+	{
+		robot_rot_y -= inc;
+	}
+	return false;
+}
+
+bool robot_correct_position(float x, float z)
+{
+	if (robot_pos_x == x && robot_pos_z == z)
+		return true;
+	float inc = 0.10f;//Incremento de distancia por unidad de tiempo
+	float deltax = x - robot_pos_x;
+	float deltaz = z - robot_pos_z;
+	float target_angle = degToRad(vectorAngle(deltax, deltaz));
+	float incx = inc * cos(target_angle);
+	float incz = inc * sin(target_angle);
+	if (sqrt((deltax * deltax) + (deltaz * deltaz)) <= inc)
+	{
+		robot_pos_x = x;
+		robot_pos_z = z;
+	}
+	else 
+	{
+		robot_pos_x += incx;
+		robot_pos_z += incz;
+	}
+	return false;
+}
+bool angle_verified = false;
+
+int plane_state = 0;
+int robot_state = -1;
+
+float radius = 20.0f;
+
 void animate(void)
-{		//Para Pong
+{		//Para Keyframes (Pong y Pelota)
 		if (i_curr_steps >= i_max_steps) //end of animation between frames?
 		{
 			playIndexPong++;
@@ -215,35 +319,263 @@ void animate(void)
 			//Contador++
 			i_curr_steps++;
 		}
-		//Para pelota
-		//if(play)
-		//{
-		//	if (i_curr_steps >= i_max_steps) //end of animation between frames?
-		//	{
-		//		playIndexPelota++;
-		//		if (playIndexPelota > FrameIndexPelota - 2)	//end of total animation?
-		//		{
-		//			playIndexPelota = 0;
-		//			play = false;
-		//		}
-		//		else //Next frame interpolations
-		//		{
-		//			i_curr_steps = 0; //Reset counter
-		//							  //Interpolation
-		//			interpolationPelota();
-		//		}
-		//	}
-		//	else
-		//	{
-		//		//Draw animation
-		//		pel_x += pel_x_inc;
-		//		pel_y += pel_y_inc;
-		//		pel_z += pel_z_inc;
-		//		pel_rot_y += pel_rot_y_inc;
+		//Para el robot
+		rotor_rotacion += 30.0f;
+		if (rotor_rotacion >= 360.0f)
+		{
+			rotor_rotacion = 0.0f;
+		}
+		//Máquina de estados del robot
+		switch(robot_state)
+		{
+		case -1:
+			if (angle_verified)
+			{
+				if (robot_correct_position(189.384, 291.558))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(189.384, 291.558);
+			}
+			break;
+		case 0:
+			if (angle_verified)
+			{
+				if (robot_correct_position(189.285, 313.769))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(189.285, 313.769);
+			}
+			break;
+		case 1:
+			if (angle_verified)
+			{
+				if (robot_correct_position(189.384, 291.558))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(189.384, 291.558);
+			}
+			break;
+		case 2:
+			if (angle_verified)
+			{
+				if (robot_correct_position(151.971, 290.928))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(151.971, 290.928);
+			}
+			break;
+		case 3:
+			if (angle_verified)
+			{
+				if (robot_correct_position(152.217, 310.121))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(152.217, 310.121);
+			}
+			break;
+		case 4:
+			if (angle_verified)
+			{
+				if (robot_correct_position(153.535, 312.229))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(153.535, 312.229);
+			}
+			break;
+		case 5:
+			if (angle_verified)
+			{
+				if (robot_correct_position(157.629, 312.106))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(157.629, 312.106);
+			}
+			break;
+		case 6:
+			if (angle_verified)
+			{
+				if (robot_correct_position(157.898, 314.92))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(157.898, 314.92);
+			}
+			break;
+		case 7:
+			if (angle_verified)
+			{
+				if (robot_correct_position(165.451, 314.293))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(165.451, 314.293);
+			}
+			break;
+		case 8:
+			if (angle_verified)
+			{
+				if (robot_correct_position(165.812, 291.674))
+				{
+					robot_state++;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(165.812, 291.674);
+			}
+			break;
+		default:
+			if (angle_verified)
+			{
+				if (robot_correct_position(204.127f, 290.874f))
+				{
+					robot_state = -1;
+					angle_verified = false;
+				}
+			}
+			else
+			{
+				angle_verified = robot_correct_angle(204.127f, 290.874f);
+			}
+			break;
+		}
+		//Para avion
+		switch (plane_state) 
+		{
+		case 0:
+			if (avion_pos_z == 100.0f)
+			{
+				plane_state++;
+				avion_rot += 15.0f;
+				radius = 12.0f;
+			}
+			else
+			{
+				avion_pos_x -= 0.157f;
+				avion_pos_y -= 0.15;
+				avion_pos_z += 2.0f;
+			}
+			break;
+		case 1:
+			if (avion_rot == 360.0f)
+			{
+				avion_rot = 0.0f;
+				plane_state++;
+			}
+			else
+			{
+				avion_rot += 15.0f;
+			}
+			break;
+		case 2:
+			if (avion_pos_z == 230.0f)
+			{
+				plane_state++;
+				avion_rot += 10.0f;
+				radius = 8.0f;
+			}
+			else
+			{
+				avion_pos_x -= 0.157f;
+				avion_pos_y -= 0.1;
+				avion_pos_z += 2.0f;
+			}
+			break;
+		case 3:
+			if (avion_rot == 360.0f)
+			{
+				avion_rot = 0.0f;
+				plane_state++;
+			}
+			else
+			{
+				avion_rot += 10.0f;
+			}
+			break;
+		case 4:
+			if (avion_pos_z == 400.0f)
+			{
+				plane_state++;
+				avion_rot += 5.0f;
+				radius = 5.0f;
+			}
+			else
+			{
+				avion_pos_z += 2.0f;
+				avion_pos_y -= 0.0203f;
+			}
+			break;
+		case 5:
+			if (avion_rot == 360.0f)
+			{
+				avion_rot = 0.0f;
+				plane_state++;
+			}
+			else
+			{
+				avion_rot += 5.0f;
+			}
+			break;
+		default:
+			if (avion_pos_z == 720.0f)
+			{
+				plane_state = 0;
+				avion_pos_x = 0.0f;
+				avion_pos_y = 0.0f;
+				avion_pos_z = 0.0f;
+			}
+			else
+			{
+				avion_pos_z += 2.0f;
+				avion_pos_y -= 0.0218f;
+			}
+			break;
+		}
 
-		//		i_curr_steps++;
-		//	}
-		//}
 }
 
 unsigned int generateTextures(const char* filename, bool alfa)
@@ -565,6 +897,12 @@ int main()
 	Model pong_b("resources/objects/pong/pong_ball.obj");
 	//Para animacion de la pelota en la alberca.
 	Model pelota("resources/objects/pelota/pelota.obj");
+	//Para animación del avión.
+	Model avion("resources/objects/avion/avion.obj");
+	//Para animación del robot.
+	Model robot("resources/objects/robot/robot.obj");
+	Model robot_rotor_izq("resources/objects/robot/rotor_left.obj");
+	Model robot_rotor_der("resources/objects/robot/rotor_right.obj");
 	//Cargando texturas
 
 	LoadTextures();
@@ -740,6 +1078,7 @@ int main()
 
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 tmp = glm::mat4(1.0f);
+		glm::mat4 tmp2 = glm::mat4(1.0f);
 		// view/projection transformations
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, pavement_height, 1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
@@ -787,6 +1126,29 @@ int main()
 		tmp = glm::rotate(tmp, glm::radians(pel_rot_y), glm::vec3(0.0f, 1.0f, 0.0f));
 		staticShader.setMat4("model", tmp);
 		pelota.Draw(staticShader);
+		//Animacion 3: Avión de papel
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(336.0f, 25.0f + radius, 45.0f));
+		model = glm::translate(model, glm::vec3(avion_pos_x, avion_pos_y, avion_pos_z));
+		model = glm::rotate(model, glm::radians(-avion_rot), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::translate(model, glm::vec3(0.0f, -radius, 0.0f));
+		staticShader.setMat4("model", model);
+		avion.Draw(staticShader);
+		//Animacion 4: Robot aspiradora
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(robot_pos_x, 0.3f, robot_pos_z));
+		model = glm::scale(model, glm::vec3(0.333f));
+		model = glm::rotate(model, glm::radians(robot_rot_y - 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		staticShader.setMat4("model", model);
+		robot.Draw(staticShader);
+		tmp = glm::translate(model, glm::vec3(1.348f, -0.592f, 0.839f));
+		tmp = glm::rotate(tmp, glm::radians(-rotor_rotacion), glm::vec3(0.0f, 1.0f, 0.0f));
+		staticShader.setMat4("model", tmp);
+		robot_rotor_izq.Draw(staticShader);
+		tmp = glm::translate(model, glm::vec3(-1.351f, -0.592f, 0.839f));
+		tmp = glm::rotate(tmp, glm::radians(rotor_rotacion), glm::vec3(0.0f, 1.0f, 0.0f));
+		staticShader.setMat4("model", tmp);
+		robot_rotor_der.Draw(staticShader);
 		// draw skybox as last
 		// -------------------
 
@@ -875,6 +1237,12 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		pel_rot_y += 0.1f;
 	if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS)
 		pel_rot_y -= 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		std::cout << "POSX: " << camera.Position.x << std::endl;
+		std::cout << "POSY: " << camera.Position.y << std::endl;
+		std::cout << "POSZ: " << camera.Position.z << std::endl;
+	}
 	//if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	//{
 	//	if (play == false && (FrameIndexPelota > 1))
