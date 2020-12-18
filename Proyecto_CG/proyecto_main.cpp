@@ -387,7 +387,7 @@ void animate(void)
 		case 3:
 			if (angle_verified)
 			{
-				if (robot_correct_position(152.217, 310.121))
+				if (robot_correct_position(152.217, 309.121))
 				{
 					robot_state++;
 					angle_verified = false;
@@ -395,13 +395,13 @@ void animate(void)
 			}
 			else
 			{
-				angle_verified = robot_correct_angle(152.217, 310.121);
+				angle_verified = robot_correct_angle(152.217, 309.121);
 			}
 			break;
 		case 4:
 			if (angle_verified)
 			{
-				if (robot_correct_position(153.535, 312.229))
+				if (robot_correct_position(153.0, 312.229))
 				{
 					robot_state++;
 					angle_verified = false;
@@ -409,7 +409,7 @@ void animate(void)
 			}
 			else
 			{
-				angle_verified = robot_correct_angle(153.535, 312.229);
+				angle_verified = robot_correct_angle(153.0, 312.229);
 			}
 			break;
 		case 5:
@@ -487,17 +487,17 @@ void animate(void)
 		switch (plane_state) 
 		{
 		case 0:
-			if (avion_pos_z == 100.0f)
+			if (avion_pos_z >= 100.0f)
 			{
 				plane_state++;
 				avion_rot += 15.0f;
-				radius = 12.0f;
+				radius = 15.0f;
 			}
 			else
 			{
 				avion_pos_x -= 0.157f;
-				avion_pos_y -= 0.15;
-				avion_pos_z += 2.0f;
+				avion_pos_y -= 0.3;
+				avion_pos_z += 4.0f;
 			}
 			break;
 		case 1:
@@ -512,17 +512,17 @@ void animate(void)
 			}
 			break;
 		case 2:
-			if (avion_pos_z == 230.0f)
+			if (avion_pos_z >= 230.0f)
 			{
 				plane_state++;
-				avion_rot += 10.0f;
-				radius = 8.0f;
+				avion_rot += 15.0f;
+				radius = 10.0f;
 			}
 			else
 			{
 				avion_pos_x -= 0.157f;
-				avion_pos_y -= 0.1;
-				avion_pos_z += 2.0f;
+				avion_pos_y -= 0.2;
+				avion_pos_z += 3.0f;
 			}
 			break;
 		case 3:
@@ -533,14 +533,14 @@ void animate(void)
 			}
 			else
 			{
-				avion_rot += 10.0f;
+				avion_rot += 15.0f;
 			}
 			break;
 		case 4:
 			if (avion_pos_z == 400.0f)
 			{
 				plane_state++;
-				avion_rot += 5.0f;
+				avion_rot += 20.0f;
 				radius = 5.0f;
 			}
 			else
@@ -557,7 +557,7 @@ void animate(void)
 			}
 			else
 			{
-				avion_rot += 5.0f;
+				avion_rot += 20.0f;
 			}
 			break;
 		default:
