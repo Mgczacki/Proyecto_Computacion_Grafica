@@ -832,10 +832,10 @@ void drawingGrass()
 	float vertices[] = {
 		// positions
 // texture coords
-		 map_max_x , 0.0f, 0.0f,   map_max_x/3, 0.0f, // top right
-		 map_max_x , 0.0f, map_max_z ,   map_max_x/3, map_max_z/3, // bottom right
-		0.0f, 0.0f, map_max_z ,   0.0f, map_max_z/3, // bottom left
-		0.0f, 0.0f, 0.0f,   0.0f, 0.0f,  // top left
+		 map_max_x , 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  map_max_x/3, 0.0f, // top right
+		 map_max_x , 0.0f, map_max_z , 0.0f, 1.0f, 0.0f,  map_max_x/3, map_max_z/3, // bottom right
+		0.0f, 0.0f, map_max_z , 0.0f, 1.0f, 0.0f,  0.0f, map_max_z/3, // bottom left
+		0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f  // top left
 	};
 
 	unsigned int indices[] = {
@@ -855,11 +855,14 @@ void drawingGrass()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	// texture coord attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	// normal coord attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+	// texture coord attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 }
 
 float street_left_left = 290.0f;
@@ -873,40 +876,40 @@ void drawingStreet()
 	float vertices[] = {
 		// positions
 // texture coords
-		 street_left_right,  street_height , map_max_z ,   street_left_right- street_left_left, 0.0f, // north right
-		 street_left_right,   street_height , 0.0f, street_left_right - street_left_left, map_max_z, // south right
-		 street_left_left ,   street_height , 0.0f, 0.0f, map_max_z, // south left
-		 street_left_left ,   street_height , map_max_z , 0.0f, 0.0f,  // north left
+		 street_left_right,  street_height , map_max_z ,  0.0f, 1.0f, 0.0f,  street_left_right- street_left_left, 0.0f, // north right
+		 street_left_right,   street_height , 0.0f, 0.0f, 1.0f, 0.0f, street_left_right - street_left_left, map_max_z, // south right
+		 street_left_left ,   street_height , 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, map_max_z, // south left
+		 street_left_left ,   street_height , map_max_z , 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // north left
 
-		 street_left_left ,  street_height , map_max_z , street_height, 0.0f, //LEFT: top north
-		 street_left_left ,   0.0f , map_max_z, 0.0f, 0.0f, // bottom north
-		 street_left_left ,   0.0f , 0.0f , 0.0f, map_max_z, // bottom south
-		 street_left_left ,   street_height , 0.0f , street_height, map_max_z,  // top south
+		 street_left_left ,  street_height , map_max_z , -1.0f, 0.0f, 0.0f, street_height, 0.0f, //LEFT: top north
+		 street_left_left ,   0.0f , map_max_z, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom north
+		 street_left_left ,   0.0f , 0.0f , -1.0f, 0.0f, 0.0f, 0.0f, map_max_z, // bottom south
+		 street_left_left ,   street_height , 0.0f , -1.0f, 0.0f, 0.0f, street_height, map_max_z,  // top south
 
-		 street_left_right ,  street_height , map_max_z , street_height, 0.0f, //RIGHT: top north
-		 street_left_right ,   0.0f , map_max_z, 0.0f, 0.0f, // bottom north
-		 street_left_right ,   0.0f , 0.0f , 0.0f, map_max_z, // bottom south
-		 street_left_right ,   street_height , 0.0f , street_height, map_max_z,  // top south
+		 street_left_right ,  street_height , map_max_z , 1.0f, 0.0f, 0.0f, street_height, 0.0f, //RIGHT: top north
+		 street_left_right ,   0.0f , map_max_z, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom north
+		 street_left_right ,   0.0f , 0.0f , 1.0f, 0.0f, 0.0f, 0.0f, map_max_z, // bottom south
+		 street_left_right ,   street_height , 0.0f , 1.0f, 0.0f, 0.0f, street_height, map_max_z,  // top south
 
-		 street_right_right,  street_height , map_max_z ,  street_right_right - street_right_left, 0.0f, // north right
-		 street_right_right,   street_height , 0.0f, street_right_right - street_right_left, map_max_z, // south right
-		 street_right_left ,   street_height , 0.0f, 0.0f, map_max_z, // south left
-		 street_right_left ,   street_height , map_max_z , 0.0f, 0.0f,  // north left
+		 street_right_right,  street_height , map_max_z , 0.0f, 1.0f, 0.0f,  street_right_right - street_right_left, 0.0f, // north right
+		 street_right_right,   street_height , 0.0f, 0.0f, 1.0f, 0.0f, street_right_right - street_right_left, map_max_z, // south right
+		 street_right_left ,   street_height , 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, map_max_z, // south left
+		 street_right_left ,   street_height , map_max_z , 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // north left
 
-		 street_right_left ,  street_height , map_max_z , street_height, 0.0f, //LEFT: top north
-		 street_right_left ,   0.0f , map_max_z, 0.0f, 0.0f, // bottom north
-		 street_right_left ,   0.0f , 0.0f , 0.0f, map_max_z, // bottom south
-		 street_right_left ,   street_height , 0.0f , street_height, map_max_z,  // top south
+		 street_right_left ,  street_height , map_max_z , -1.0f, 0.0f, 0.0f, street_height, 0.0f, //LEFT: top north
+		 street_right_left ,   0.0f , map_max_z, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom north
+		 street_right_left ,   0.0f , 0.0f , -1.0f, 0.0f, 0.0f, 0.0f, map_max_z, // bottom south
+		 street_right_left ,   street_height , 0.0f , -1.0f, 0.0f, 0.0f, street_height, map_max_z,  // top south
 
-		 street_right_right ,  street_height , map_max_z , street_height, 0.0f, //RIGHT: top north
-		 street_right_right ,   0.0f , map_max_z, 0.0f, 0.0f, // bottom north
-		 street_right_right ,   0.0f , 0.0f , 0.0f, map_max_z, // bottom south
-		 street_right_right ,   street_height , 0.0f , street_height, map_max_z,  // top south
+		 street_right_right ,  street_height , map_max_z , 1.0f, 0.0f, 0.0f, street_height, 0.0f, //RIGHT: top north
+		 street_right_right ,   0.0f , map_max_z, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom north
+		 street_right_right ,   0.0f , 0.0f , 1.0f, 0.0f, 0.0f, 0.0f, map_max_z, // bottom south
+		 street_right_right ,   street_height , 0.0f , 1.0f, 0.0f, 0.0f, street_height, map_max_z,  // top south
 
-		 street_right_right,  pavement_height , map_max_z ,   street_right_left-street_left_right, 0.0f, //PAVEMENT: north right
-		 street_right_right,   pavement_height , 0.0f, street_right_left - street_left_right, map_max_z, // south right
-		 street_left_right ,   pavement_height , 0.0f, 0.0f, map_max_z, // south left
-		 street_left_right ,   pavement_height , map_max_z , 0.0f, 0.0f,  // north left
+		 street_right_right,  pavement_height , map_max_z , 0.0f, 1.0f, 0.0f,   street_right_left-street_left_right, 0.0f, //PAVEMENT: north right
+		 street_right_right,   pavement_height , 0.0f, 0.0f, 1.0f, 0.0f, street_right_left - street_left_right, map_max_z, // south right
+		 street_left_right ,   pavement_height , 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, map_max_z, // south left
+		 street_left_right ,   pavement_height , map_max_z , 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // north left
 	};
 	unsigned int indices[] = {
 		0, 1, 3, // first triangle
@@ -943,86 +946,16 @@ void drawingStreet()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	// texture coord attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	// normal coord attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+	// texture coord attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 }
 
-void drawingWall()
-{
-	float vertices[] = {
-			// positions
-// texture coords
-			 0.5f,  0.5f, 0.0f,   0.5f, 1.0f, // top right
-			 0.5f, -0.5f, 0.0f,   0.5f, 0.66666f, // bottom right
-			-0.5f, -0.5f, 0.0f,   0.25f, 0.66666f, // bottom left
-			-0.5f,  0.5f, 0.0f,   0.25f, 1.0f,  // top left
-
-			 0.5f,  0.5f, 0.0f,   0.25f, 0.66666f, // top right
-			 0.5f, -0.5f, 0.0f,   0.25f, 0.33333f, // bottom right
-			-0.5f, -0.5f, 0.0f,   0.0f, 0.33333f, // bottom left
-			-0.5f,  0.5f, 0.0f,   0.0f, 0.66666f,  // top left
-
-			 0.5f,  0.5f, 0.0f,   0.5f, 0.66666f, // top right
-			 0.5f, -0.5f, 0.0f,   0.5f, 0.33333f, // bottom right
-			-0.5f, -0.5f, 0.0f,   0.25f, 0.33333f, // bottom left
-			-0.5f,  0.5f, 0.0f,   0.25f, 0.66666f,  // top left
-
-			 0.5f,  0.5f, 0.0f,   0.75f, 0.66666f, // top right
-			 0.5f, -0.5f, 0.0f,   0.75f, 0.33333f, // bottom right
-			-0.5f, -0.5f, 0.0f,   0.5f, 0.33333f, // bottom left
-			-0.5f,  0.5f, 0.0f,   0.5f, 0.66666f,  // top left
-
-			 0.5f,  0.5f, 0.0f,   1.0f, 0.66666f, // top right
-			 0.5f, -0.5f, 0.0f,   1.0f, 0.33333f, // bottom right
-			-0.5f, -0.5f, 0.0f,   0.75f, 0.33333f, // bottom left
-			-0.5f,  0.5f, 0.0f,   0.75f, 0.66666f,  // top left
-
-			 0.5f,  0.5f, 0.0f,   0.5f, 0.33333f, // top right
-			 0.5f, -0.5f, 0.0f,   0.5f, 0.0f, // bottom right
-			-0.5f, -0.5f, 0.0f,   0.25f, 0.0f, // bottom left
-			-0.5f,  0.5f, 0.0f,   0.25f, 0.33333f,  // top left
-		};
-		unsigned int indices[] = {
-			0, 1, 3, // first triangle
-			1, 2, 3,  // second triangle
-
-			4, 5, 7, // first triangle
-			5, 6, 7,  // second triangle
-
-			8, 9, 11, // first triangle
-			9, 10, 11,  // second triangle
-
-			12, 13, 15, // first triangle
-			13, 14, 15,  // second triangle
-
-			16, 17, 19, // first triangle
-			17, 18, 19,  // second triangle
-
-			20, 21, 23, // first triangle
-			21, 22, 23  // second triangle
-		};
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
-	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	// texture coord attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-}
 void LoadTextures()
 {
 	t_pasto = generateTextures("resources/texturas/pasto.jpg", 0);
@@ -1610,7 +1543,6 @@ int main()
 
 	// build and compile shaders
 	// -------------------------
-	//Shader staticShader("Shaders/lightVertex.vs", "Shaders/lightFragment.fs");
 	Shader staticShader("Shaders/shader_Lights.vs", "Shaders/shader_Lights.fs");
 	Shader skyboxShader("Shaders/skybox.vs", "Shaders/skybox.fs");
 	Shader projectionShader("Shaders/shader_texture_color.vs", "Shaders/shader_texture_color.fs");
@@ -1949,7 +1881,7 @@ int main()
 		// -------------------------------------------------------------------------------------------------------------------------
 		// Escenario
 		// -------------------------------------------------------------------------------------------------------------------------
-		model = glm::mat4(1.0f);
+		/*model = glm::mat4(1.0f);
 		projectionShader.use();
 		projectionShader.setVec3("viewPos", camera.Position);
 		projectionShader.setMat4("model", model);
@@ -1964,6 +1896,24 @@ int main()
 		drawingStreet();
 		projectionShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
 		projectionShader.setMat4("model", model);
+		glBindTexture(GL_TEXTURE_2D, t_acera);
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		glBindTexture(GL_TEXTURE_2D, t_pavimento);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(36 * sizeof(float)));*/
+
+		model = glm::mat4(1.0f);
+		staticShader.setVec3("viewPos", camera.Position);
+		staticShader.setMat4("model", model);
+		staticShader.setMat4("view", view);
+		staticShader.setMat4("projection", projection);
+		drawingGrass();
+		staticShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
+		staticShader.setMat4("model", model);
+		glBindTexture(GL_TEXTURE_2D, t_pasto);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		drawingStreet();
+		staticShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
+		staticShader.setMat4("model", model);
 		glBindTexture(GL_TEXTURE_2D, t_acera);
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		glBindTexture(GL_TEXTURE_2D, t_pavimento);
@@ -2064,7 +2014,7 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		/*std::cout << "POSX: " << camera.Position.x << std::endl;
 		std::cout << "POSY: " << camera.Position.y << std::endl;
 		std::cout << "POSZ: " << camera.Position.z << std::endl;*/
-		std::cout << "(" << camera.Position.x << ", " << camera.Position.z << ");" << std::endl;
+		std::cout << "(" << camera.Position.x << "f, " << camera.Position.y << "f, " << camera.Position.z << "f);" << std::endl;
 	}
 	if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	{
