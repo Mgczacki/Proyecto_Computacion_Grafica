@@ -41,5 +41,17 @@
     <None Include="shaders\shader_texture_color.vs">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="shaders\shader_lamp.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\shader_lamp.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\shader_MLights.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\shader_MLights.vs">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

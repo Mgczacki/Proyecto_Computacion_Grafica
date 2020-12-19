@@ -1,43 +1,5 @@
 # 3ds Max Wavefront OBJ Exporter v0.99 - (c)2007 guruware
-# File Created: 18.12.2020 21:15:40
-
-newmtl Material__0
-	Ns 10.0000
-	Ni 1.5000
-	d 1.0000
-	Tr 0.0000
-	Tf 1.0000 1.0000 1.0000 
-	illum 2
-	Ka 0.9333 0.9333 0.9333
-	Kd 0.9333 0.9333 0.9333
-	Ks 0.0000 0.0000 0.0000
-	Ke 0.0000 0.0000 0.0000
-	map_Ka Map__21_Map Output Selector.jpg
-	map_Kd Map__21_Map Output Selector.jpg
-
-newmtl Material__74
-	Ns 10.0000
-	Ni 1.5000
-	d 1.0000
-	Tr 0.0000
-	Tf 1.0000 1.0000 1.0000 
-	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
-	Ks 0.0000 0.0000 0.0000
-	Ke 0.0000 0.0000 0.0000
-	map_Ka Map__40_Map Output Selector.jpg
-	map_Kd Map__40_Map Output Selector.jpg
-
-newmtl wire_177088027
-	Ns 32
-	d 1
-	Tr 0
-	Tf 1 1 1
-	illum 2
-	Ka 0.6941 0.3451 0.1059
-	Kd 0.6941 0.3451 0.1059
-	Ks 0.3500 0.3500 0.3500
+# File Created: 19.12.2020 00:22:18
 
 newmtl orig_orig_orig_orig_orig_orig_orig_10057_wooden_door_v1
 	Kd 0.5880 0.5880 0.5880
@@ -68,7 +30,7 @@ newmtl Material__12
 	map_Ka Map__27_Map Output Selector.jpg
 	map_Kd Map__27_Map Output Selector.jpg
 
-newmtl Material__13
+newmtl Material__74
 	Ns 10.0000
 	Ni 1.5000
 	d 1.0000
@@ -79,18 +41,8 @@ newmtl Material__13
 	Kd 0.5880 0.5880 0.5880
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka Map__31_Map Output Selector.jpg
-	map_Kd Map__31_Map Output Selector.jpg
-
-newmtl wire_177148027
-	Ns 32
-	d 1
-	Tr 0
-	Tf 1 1 1
-	illum 2
-	Ka 0.6941 0.5804 0.1059
-	Kd 0.6941 0.5804 0.1059
-	Ks 0.3500 0.3500 0.3500
+	map_Ka Map__40_Map Output Selector.jpg
+	map_Kd Map__40_Map Output Selector.jpg
 
 newmtl Material__73
 	Ns 10.0000
@@ -437,59 +389,3 @@ newmtl wire_088199225
 	Ka 0.3451 0.7804 0.8824
 	Kd 0.3451 0.7804 0.8824
 	Ks 0.3500 0.3500 0.3500
-
-newmtl Material__588
-	Ns 10.0000
-	Ni 1.5000
-	d 1.0000
-	Tr 0.0000
-	Tf 1.0000 1.0000 1.0000 
-	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
-	Ks 0.0000 0.0000 0.0000
-	Ke 0.0000 0.0000 0.0000
-	map_Ka TexturesCom_Tiles_SmallMosaic_1K_albedo.jpg
-	map_Kd TexturesCom_Tiles_SmallMosaic_1K_albedo.jpg
-
-newmtl Material__601
-	Ns 10.0000
-	Ni 1.5000
-	d 1.0000
-	Tr 0.0000
-	Tf 1.0000 1.0000 1.0000 
-	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
-	Ks 0.0000 0.0000 0.0000
-	Ke 0.0000 0.0000 0.0000
-	map_Ka Map__178_Color Map.jpg
-	map_Kd Map__178_Color Map.jpg
-
-newmtl Material__602
-	Ns 10.0000
-	Ni 1.5000
-	d 1.0000
-	Tr 0.0000
-	Tf 1.0000 1.0000 1.0000 
-	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
-	Ks 0.0000 0.0000 0.0000
-	Ke 0.0000 0.0000 0.0000
-	map_Ka Bricks034_2K_Color.jpg
-	map_Kd Bricks034_2K_Color.jpg
-
-newmtl Material__454
-	Ns 10.0000
-	Ni 1.5000
-	d 1.0000
-	Tr 0.0000
-	Tf 1.0000 1.0000 1.0000 
-	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
-	Ks 0.0000 0.0000 0.0000
-	Ke 0.0000 0.0000 0.0000
-	map_Ka Map__125_Map Output Selector.jpg
-	map_Kd Map__125_Map Output Selector.jpg

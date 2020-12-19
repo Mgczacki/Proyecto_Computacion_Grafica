@@ -70,7 +70,7 @@ const unsigned int SCR_WIDTH = 2560;
 const unsigned int SCR_HEIGHT = 1440;
 
 // camera
-Camera camera(glm::vec3(0.0f, 4.0f, 30.0f));
+Camera camera(glm::vec3(118.702f, 10.0f, 277.351));
 float speedMultiplier = 0.3;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
@@ -85,6 +85,8 @@ double	deltaTime = 0.0f,
 //Lighting
 glm::vec3 lightPosition(0.0f, 4.0f, -10.0f);
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
+glm::vec3 insideLightPosition(0.0f, 4.0f, -10.0f);
+glm::vec3 insideLightDirection(0.0f, -1.0f, 0.0f);
 
 GLuint VBO, VAO, EBO;
 
@@ -871,6 +873,9 @@ float street_right_left = 334.0f;
 float street_right_right = 346.f;
 float street_height = 0.3;
 float pavement_height = 0.2;
+
+bool noche = false;
+
 void drawingStreet()
 {
 	float vertices[] = {
@@ -1543,9 +1548,10 @@ int main()
 
 	// build and compile shaders
 	// -------------------------
-	Shader staticShader("Shaders/shader_Lights.vs", "Shaders/shader_Lights.fs");
+	Shader outsideShader("Shaders/shader_MLights.vs", "Shaders/shader_MLights.fs");
+	Shader insideShader("Shaders/shader_Lights.vs", "Shaders/shader_Lights.fs");
+	Shader lampShader("Shaders/shader_Lights.vs", "Shaders/shader_Lights.fs");
 	Shader skyboxShader("Shaders/skybox.vs", "Shaders/skybox.fs");
-	Shader projectionShader("Shaders/shader_texture_color.vs", "Shaders/shader_texture_color.fs");
 
 	vector<std::string> faces
 	{
@@ -1557,7 +1563,18 @@ int main()
 		"resources/skybox/back.jpg"
 	};
 
+	vector<std::string> faces2
+	{
+		"resources/skybox/posx.jpg",
+		"resources/skybox/negx.jpg",
+		"resources/skybox/posy.jpg",
+		"resources/skybox/negy.jpg",
+		"resources/skybox/posz.jpg",
+		"resources/skybox/negz.jpg"
+	};
+
 	Skybox skybox = Skybox(faces);
+	Skybox skyboxNight = Skybox(faces2);
 
 	// Shader configuration
 	// --------------------
@@ -1566,14 +1583,28 @@ int main()
 
 	// load models
 	// -----------
-	Model casa1("resources/objects/casa1/casa1.obj");
+	//La casa
+	//Shader externo
+	Model paredes_externas("resources/objects/casa1/paredes_externas.obj");
+	Model garage_externo("resources/objects/casa1/garage_externo.obj");
+	Model muebles_externos("resources/objects/casa1/muebles_externos.obj");
+	Model techo("resources/objects/casa1/techo.obj");
+	//Shader interno
+	Model paredes_internas("resources/objects/casa1/paredes_internas.obj");
+	Model shading_interno("resources/objects/casa1/shading_interno.obj");
+	//Lámparas
+	Model lamparas_dia("resources/objects/lamparas/lamparas.obj");
+	Model lamparas_noche("resources/objects/lamparas/lamparas_noche.obj");
+	//El resto de la cuadra
 	Model casa2("resources/objects/casa2/casa2.obj");
 	Model casa3("resources/objects/casa3/casa3.obj");
 	Model casa4("resources/objects/casa4/casa4.obj");
 	Model bardas("resources/objects/bardas/bardas.obj");
 	Model bosque("resources/objects/bosque/bosque.obj");
 	Model caminos("resources/objects/caminos/caminos.obj");
-	Model postes("resources/objects/postes/postes.obj");
+	//Postes
+	Model postes_noche("resources/objects/postes/postes_noche.obj");
+	Model postes_focos("resources/objects/postes/postes_focos.obj");
 	//Para animacion de PONG.
 	Model pong_l("resources/objects/pong/pong_izq.obj");
 	Model pong_r("resources/objects/pong/pong_der.obj");
@@ -1727,7 +1758,7 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		skyboxShader.setInt("skybox", 0);
-		
+
 		// per-frame time logic
 		// --------------------
 		lastFrame = SDL_GetTicks();
@@ -1743,188 +1774,864 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// don't forget to enable shader before setting uniforms
-		staticShader.use();
-		//Setup Advanced Lights
-		staticShader.setVec3("viewPos", camera.Position);
-		staticShader.setVec3("dirLight.direction", lightDirection);
-		staticShader.setVec3("dirLight.ambient", glm::vec3(0.2f, 0.2f, 0.2f));
-		staticShader.setVec3("dirLight.diffuse", glm::vec3(0.6f, 0.6f, 0.6f));
-		staticShader.setVec3("dirLight.specular", glm::vec3(0.0f, 0.0f, 0.0f));
+		outsideShader.use();
+		//Setup luces
+		outsideShader.setVec3("viewPos", camera.Position);
+		outsideShader.setVec3("dirLight.direction", lightDirection);
+		outsideShader.setFloat("material_shininess", 32.0f);
+		if(!noche)
+		{//Shading de día
+			outsideShader.setVec3("dirLight.ambient", glm::vec3(0.5f, 0.5f, 0.5f));
+			outsideShader.setVec3("dirLight.diffuse", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("dirLight.specular", glm::vec3(0.2f, 0.2f, 0.2f));
 
-		staticShader.setVec3("pointLight[0].position", lightPosition);
-		staticShader.setVec3("pointLight[0].ambient", glm::vec3(0.2f, 0.2f, 0.2f));
-		staticShader.setVec3("pointLight[0].diffuse", glm::vec3(0.6f, 0.6f, 0.6f));
-		staticShader.setVec3("pointLight[0].specular", glm::vec3(0.0f, 0.0f, 0.0f));
-		staticShader.setFloat("pointLight[0].constant", 0.8f);
-		staticShader.setFloat("pointLight[0].linear", 0.009f);
-		staticShader.setFloat("pointLight[0].quadratic", 0.032f);
+			outsideShader.setVec3("pointLight[0].position", glm::vec3(293.042f, 15.6692f, 4.26191f));
+			outsideShader.setVec3("pointLight[0].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[0].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[0].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[0].constant", 0.7f);
+			outsideShader.setFloat("pointLight[0].linear", 0.04f);
+			outsideShader.setFloat("pointLight[0].quadratic", 0.01f);
 
-		staticShader.setVec3("pointLight[1].position", glm::vec3(0.0, 0.0f, 0.0f));
-		staticShader.setVec3("pointLight[1].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
-		staticShader.setVec3("pointLight[1].diffuse", glm::vec3(0.6f, 0.6f, 0.6f));
-		staticShader.setVec3("pointLight[1].specular", glm::vec3(0.0f, 0.0f, 0.0f));
-		staticShader.setFloat("pointLight[1].constant", 1.0f);
-		staticShader.setFloat("pointLight[1].linear", 0.009f);
-		staticShader.setFloat("pointLight[1].quadratic", 0.032f);
+			outsideShader.setVec3("pointLight[1].position", glm::vec3(342.68f, 16.7556f, 4.31773f));
+			outsideShader.setVec3("pointLight[1].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[1].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[1].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[1].constant", 0.7f);
+			outsideShader.setFloat("pointLight[1].linear", 0.04f);
+			outsideShader.setFloat("pointLight[1].quadratic", 0.01f);
 
-		staticShader.setFloat("material_shininess", 32.0f);
+			outsideShader.setVec3("pointLight[2].position", glm::vec3(342.37f, 16.1238f, 79.9482f));
+			outsideShader.setVec3("pointLight[2].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[2].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[2].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[2].constant", 0.7f);
+			outsideShader.setFloat("pointLight[2].linear", 0.04f);
+			outsideShader.setFloat("pointLight[2].quadratic", 0.01f);
 
+			outsideShader.setVec3("pointLight[3].position", glm::vec3(342.5f, 16.2667f, 157.065f));
+			outsideShader.setVec3("pointLight[3].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[3].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[3].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[3].constant", 0.7f);
+			outsideShader.setFloat("pointLight[3].linear", 0.04f);
+			outsideShader.setFloat("pointLight[3].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[4].position", glm::vec3(342.744f, 16.0782f, 232.342f));
+			outsideShader.setVec3("pointLight[4].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[4].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[4].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[4].constant", 0.7f);
+			outsideShader.setFloat("pointLight[4].linear", 0.04f);
+			outsideShader.setFloat("pointLight[4].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[5].position", glm::vec3(342.618f, 15.9671f, 292.37f));
+			outsideShader.setVec3("pointLight[5].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[5].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[5].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[5].constant", 0.7f);
+			outsideShader.setFloat("pointLight[5].linear", 0.04f);
+			outsideShader.setFloat("pointLight[5].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[6].position", glm::vec3(342.534f, 16.0145f, 317.269f));
+			outsideShader.setVec3("pointLight[6].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[6].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[6].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[6].constant", 0.7f);
+			outsideShader.setFloat("pointLight[6].linear", 0.04f);
+			outsideShader.setFloat("pointLight[6].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[7].position", glm::vec3(342.559f, 16.1613f, 390.896f));
+			outsideShader.setVec3("pointLight[7].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[7].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[7].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[7].constant", 0.7f);
+			outsideShader.setFloat("pointLight[7].linear", 0.04f);
+			outsideShader.setFloat("pointLight[7].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[8].position", glm::vec3(342.663f, 16.5252f, 454.696f));
+			outsideShader.setVec3("pointLight[8].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[8].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[8].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[8].constant", 0.7f);
+			outsideShader.setFloat("pointLight[8].linear", 0.04f);
+			outsideShader.setFloat("pointLight[8].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[9].position", glm::vec3(342.621f, 17.2002f, 479.991f));
+			outsideShader.setVec3("pointLight[9].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[9].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[9].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[9].constant", 0.7f);
+			outsideShader.setFloat("pointLight[9].linear", 0.04f);
+			outsideShader.setFloat("pointLight[9].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[10].position", glm::vec3(342.809f, 16.0347f, 537.113f));
+			outsideShader.setVec3("pointLight[10].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[10].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[10].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[10].constant", 0.7f);
+			outsideShader.setFloat("pointLight[10].linear", 0.04f);
+			outsideShader.setFloat("pointLight[10].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[11].position", glm::vec3(342.596f, 16.8832f, 593.279f));
+			outsideShader.setVec3("pointLight[11].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[11].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[11].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[11].constant", 0.7f);
+			outsideShader.setFloat("pointLight[11].linear", 0.04f);
+			outsideShader.setFloat("pointLight[11].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[12].position", glm::vec3(342.565f, 15.8552f, 649.711f));
+			outsideShader.setVec3("pointLight[12].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[12].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[12].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[12].constant", 0.7f);
+			outsideShader.setFloat("pointLight[12].linear", 0.04f);
+			outsideShader.setFloat("pointLight[12].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[13].position", glm::vec3(342.565f, 15.7905f, 705.593f));
+			outsideShader.setVec3("pointLight[13].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[13].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[13].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[13].constant", 0.7f);
+			outsideShader.setFloat("pointLight[13].linear", 0.04f);
+			outsideShader.setFloat("pointLight[13].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[14].position", glm::vec3(293.062f, 15.676f, 705.468f));
+			outsideShader.setVec3("pointLight[14].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[14].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[14].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[14].constant", 0.7f);
+			outsideShader.setFloat("pointLight[14].linear", 0.04f);
+			outsideShader.setFloat("pointLight[14].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[15].position", glm::vec3(293.107f, 16.2884f, 649.48f));
+			outsideShader.setVec3("pointLight[15].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[15].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[15].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[15].constant", 0.7f);
+			outsideShader.setFloat("pointLight[15].linear", 0.04f);
+			outsideShader.setFloat("pointLight[15].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[16].position", glm::vec3(293.174f, 16.3224f, 593.974f));
+			outsideShader.setVec3("pointLight[16].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[16].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[16].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[16].constant", 0.7f);
+			outsideShader.setFloat("pointLight[16].linear", 0.04f);
+			outsideShader.setFloat("pointLight[16].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[17].position", glm::vec3(293.23f, 16.2697f, 537.775f));
+			outsideShader.setVec3("pointLight[17].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[17].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[17].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[17].constant", 0.7f);
+			outsideShader.setFloat("pointLight[17].linear", 0.04f);
+			outsideShader.setFloat("pointLight[17].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[18].position", glm::vec3(293.094f, 16.276f, 480.55f));
+			outsideShader.setVec3("pointLight[18].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[18].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[18].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[18].constant", 0.7f);
+			outsideShader.setFloat("pointLight[18].linear", 0.04f);
+			outsideShader.setFloat("pointLight[18].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[19].position", glm::vec3(293.086f, 16.048f, 455.163f));
+			outsideShader.setVec3("pointLight[19].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[19].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[19].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[19].constant", 0.7f);
+			outsideShader.setFloat("pointLight[19].linear", 0.04f);
+			outsideShader.setFloat("pointLight[19].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[20].position", glm::vec3(293.095f, 15.9682f, 391.252f));
+			outsideShader.setVec3("pointLight[20].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[20].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[20].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[20].constant", 0.7f);
+			outsideShader.setFloat("pointLight[20].linear", 0.04f);
+			outsideShader.setFloat("pointLight[20].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[21].position", glm::vec3(293.077f, 16.0079f, 317.017f));
+			outsideShader.setVec3("pointLight[21].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[21].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[21].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[21].constant", 0.7f);
+			outsideShader.setFloat("pointLight[21].linear", 0.04f);
+			outsideShader.setFloat("pointLight[21].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[22].position", glm::vec3(293.063f, 15.9916f, 291.686f));
+			outsideShader.setVec3("pointLight[22].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[22].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[22].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[22].constant", 0.7f);
+			outsideShader.setFloat("pointLight[22].linear", 0.04f);
+			outsideShader.setFloat("pointLight[22].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[23].position", glm::vec3(293.064f, 15.8211f, 232.57f));
+			outsideShader.setVec3("pointLight[23].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[23].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[23].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[23].constant", 0.7f);
+			outsideShader.setFloat("pointLight[23].linear", 0.04f);
+			outsideShader.setFloat("pointLight[23].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[24].position", glm::vec3(293.1f, 16.187f, 156.697f));
+			outsideShader.setVec3("pointLight[24].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[25].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[24].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[24].constant", 0.7f);
+			outsideShader.setFloat("pointLight[24].linear", 0.04f);
+			outsideShader.setFloat("pointLight[24].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[25].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[25].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[25].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[25].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[25].constant", 0.7f);
+			outsideShader.setFloat("pointLight[25].linear", 0.04f);
+			outsideShader.setFloat("pointLight[25].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[26].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[26].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[26].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[26].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[26].constant", 0.7f);
+			outsideShader.setFloat("pointLight[26].linear", 0.04f);
+			outsideShader.setFloat("pointLight[26].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[27].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[27].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[27].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[27].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[27].constant", 0.7f);
+			outsideShader.setFloat("pointLight[27].linear", 0.04f);
+			outsideShader.setFloat("pointLight[27].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[28].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[28].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[28].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[28].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[28].constant", 0.7f);
+			outsideShader.setFloat("pointLight[28].linear", 0.04f);
+			outsideShader.setFloat("pointLight[28].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[29].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[29].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[29].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[29].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[29].constant", 0.7f);
+			outsideShader.setFloat("pointLight[29].linear", 0.04f);
+			outsideShader.setFloat("pointLight[29].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[30].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[30].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[30].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[30].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[30].constant", 0.7f);
+			outsideShader.setFloat("pointLight[30].linear", 0.04f);
+			outsideShader.setFloat("pointLight[30].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[31].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[31].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[31].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[31].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[31].constant", 0.7f);
+			outsideShader.setFloat("pointLight[31].linear", 0.04f);
+			outsideShader.setFloat("pointLight[31].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[32].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[32].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[32].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[32].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[32].constant", 0.7f);
+			outsideShader.setFloat("pointLight[32].linear", 0.04f);
+			outsideShader.setFloat("pointLight[32].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[33].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[33].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[33].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[33].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[33].constant", 0.7f);
+			outsideShader.setFloat("pointLight[33].linear", 0.04f);
+			outsideShader.setFloat("pointLight[33].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[34].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[34].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[34].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[34].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[34].constant", 0.7f);
+			outsideShader.setFloat("pointLight[34].linear", 0.04f);
+			outsideShader.setFloat("pointLight[34].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[35].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[35].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[35].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[35].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[35].constant", 0.7f);
+			outsideShader.setFloat("pointLight[35].linear", 0.04f);
+			outsideShader.setFloat("pointLight[35].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[36].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[36].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[36].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[36].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[36].constant", 0.7f);
+			outsideShader.setFloat("pointLight[36].linear", 0.04f);
+			outsideShader.setFloat("pointLight[36].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[37].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[37].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[37].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setVec3("pointLight[37].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[37].constant", 0.7f);
+			outsideShader.setFloat("pointLight[37].linear", 0.04f);
+			outsideShader.setFloat("pointLight[37].quadratic", 0.01f);
+
+		}
+		else
+		{//Shading de noche, faltan light sources aparte
+			outsideShader.setVec3("dirLight.ambient", glm::vec3(0.02f, 0.02f, 0.02f));
+			outsideShader.setVec3("dirLight.diffuse", glm::vec3(0.05f, 0.05f, 0.05f));
+			outsideShader.setVec3("dirLight.specular", glm::vec3(0.0f, 0.0f, 0.0f));
+
+			outsideShader.setVec3("pointLight[0].position", glm::vec3(293.042f, 15.6692f, 4.26191f));
+			outsideShader.setVec3("pointLight[0].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[0].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[0].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[0].constant", 0.7f);
+			outsideShader.setFloat("pointLight[0].linear", 0.04f);
+			outsideShader.setFloat("pointLight[0].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[1].position", glm::vec3(342.68f, 16.7556f, 4.31773f));
+			outsideShader.setVec3("pointLight[1].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[1].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[1].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[1].constant", 0.7f);
+			outsideShader.setFloat("pointLight[1].linear", 0.04f);
+			outsideShader.setFloat("pointLight[1].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[2].position", glm::vec3(342.37f, 16.1238f, 79.9482f));
+			outsideShader.setVec3("pointLight[2].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[2].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[2].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[2].constant", 0.7f);
+			outsideShader.setFloat("pointLight[2].linear", 0.04f);
+			outsideShader.setFloat("pointLight[2].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[3].position", glm::vec3(342.5f, 16.2667f, 157.065f));
+			outsideShader.setVec3("pointLight[3].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[3].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[3].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[3].constant", 0.7f);
+			outsideShader.setFloat("pointLight[3].linear", 0.04f);
+			outsideShader.setFloat("pointLight[3].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[4].position", glm::vec3(342.744f, 16.0782f, 232.342f));
+			outsideShader.setVec3("pointLight[4].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[4].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[4].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[4].constant", 0.7f);
+			outsideShader.setFloat("pointLight[4].linear", 0.04f);
+			outsideShader.setFloat("pointLight[4].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[5].position", glm::vec3(342.618f, 15.9671f, 292.37f));
+			outsideShader.setVec3("pointLight[5].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[5].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[5].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[5].constant", 0.7f);
+			outsideShader.setFloat("pointLight[5].linear", 0.04f);
+			outsideShader.setFloat("pointLight[5].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[6].position", glm::vec3(342.534f, 16.0145f, 317.269f));
+			outsideShader.setVec3("pointLight[6].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[6].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[6].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[6].constant", 0.7f);
+			outsideShader.setFloat("pointLight[6].linear", 0.04f);
+			outsideShader.setFloat("pointLight[6].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[7].position", glm::vec3(342.559f, 16.1613f, 390.896f));
+			outsideShader.setVec3("pointLight[7].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[7].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[7].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[7].constant", 0.7f);
+			outsideShader.setFloat("pointLight[7].linear", 0.04f);
+			outsideShader.setFloat("pointLight[7].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[8].position", glm::vec3(342.663f, 16.5252f, 454.696f));
+			outsideShader.setVec3("pointLight[8].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[8].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[8].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[8].constant", 0.7f);
+			outsideShader.setFloat("pointLight[8].linear", 0.04f);
+			outsideShader.setFloat("pointLight[8].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[9].position", glm::vec3(342.621f, 17.2002f, 479.991f));
+			outsideShader.setVec3("pointLight[9].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[9].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[9].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[9].constant", 0.7f);
+			outsideShader.setFloat("pointLight[9].linear", 0.04f);
+			outsideShader.setFloat("pointLight[9].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[10].position", glm::vec3(342.809f, 16.0347f, 537.113f));
+			outsideShader.setVec3("pointLight[10].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[10].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[10].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[10].constant", 0.7f);
+			outsideShader.setFloat("pointLight[10].linear", 0.04f);
+			outsideShader.setFloat("pointLight[10].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[11].position", glm::vec3(342.596f, 16.8832f, 593.279f));
+			outsideShader.setVec3("pointLight[11].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[11].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[11].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[11].constant", 0.7f);
+			outsideShader.setFloat("pointLight[11].linear", 0.04f);
+			outsideShader.setFloat("pointLight[11].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[12].position", glm::vec3(342.565f, 15.8552f, 649.711f));
+			outsideShader.setVec3("pointLight[12].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[12].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[12].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[12].constant", 0.7f);
+			outsideShader.setFloat("pointLight[12].linear", 0.04f);
+			outsideShader.setFloat("pointLight[12].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[13].position", glm::vec3(342.565f, 15.7905f, 705.593f));
+			outsideShader.setVec3("pointLight[13].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[13].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[13].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[13].constant", 0.7f);
+			outsideShader.setFloat("pointLight[13].linear", 0.04f);
+			outsideShader.setFloat("pointLight[13].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[14].position", glm::vec3(293.062f, 15.676f, 705.468f));
+			outsideShader.setVec3("pointLight[14].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[14].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[14].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[14].constant", 0.7f);
+			outsideShader.setFloat("pointLight[14].linear", 0.04f);
+			outsideShader.setFloat("pointLight[14].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[15].position", glm::vec3(293.107f, 16.2884f, 649.48f));
+			outsideShader.setVec3("pointLight[15].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[15].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[15].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[15].constant", 0.7f);
+			outsideShader.setFloat("pointLight[15].linear", 0.04f);
+			outsideShader.setFloat("pointLight[15].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[16].position", glm::vec3(293.174f, 16.3224f, 593.974f));
+			outsideShader.setVec3("pointLight[16].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[16].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[16].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[16].constant", 0.7f);
+			outsideShader.setFloat("pointLight[16].linear", 0.04f);
+			outsideShader.setFloat("pointLight[16].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[17].position", glm::vec3(293.23f, 16.2697f, 537.775f));
+			outsideShader.setVec3("pointLight[17].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[17].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[17].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[17].constant", 0.7f);
+			outsideShader.setFloat("pointLight[17].linear", 0.04f);
+			outsideShader.setFloat("pointLight[17].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[18].position", glm::vec3(293.094f, 16.276f, 480.55f));
+			outsideShader.setVec3("pointLight[18].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[18].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[18].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[18].constant", 0.7f);
+			outsideShader.setFloat("pointLight[18].linear", 0.04f);
+			outsideShader.setFloat("pointLight[18].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[19].position", glm::vec3(293.086f, 16.048f, 455.163f));
+			outsideShader.setVec3("pointLight[19].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[19].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[19].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[19].constant", 0.7f);
+			outsideShader.setFloat("pointLight[19].linear", 0.04f);
+			outsideShader.setFloat("pointLight[19].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[20].position", glm::vec3(293.095f, 15.9682f, 391.252f));
+			outsideShader.setVec3("pointLight[20].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[20].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[20].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[20].constant", 0.7f);
+			outsideShader.setFloat("pointLight[20].linear", 0.04f);
+			outsideShader.setFloat("pointLight[20].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[21].position", glm::vec3(293.077f, 16.0079f, 317.017f));
+			outsideShader.setVec3("pointLight[21].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[21].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[21].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[21].constant", 0.7f);
+			outsideShader.setFloat("pointLight[21].linear", 0.04f);
+			outsideShader.setFloat("pointLight[21].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[22].position", glm::vec3(293.063f, 15.9916f, 291.686f));
+			outsideShader.setVec3("pointLight[22].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[22].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[22].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[22].constant", 0.7f);
+			outsideShader.setFloat("pointLight[22].linear", 0.04f);
+			outsideShader.setFloat("pointLight[22].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[23].position", glm::vec3(293.064f, 15.8211f, 232.57f));
+			outsideShader.setVec3("pointLight[23].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[23].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[23].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[23].constant", 0.7f);
+			outsideShader.setFloat("pointLight[23].linear", 0.04f);
+			outsideShader.setFloat("pointLight[23].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[24].position", glm::vec3(293.1f, 16.187f, 156.697f));
+			outsideShader.setVec3("pointLight[24].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[25].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[24].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[24].constant", 0.7f);
+			outsideShader.setFloat("pointLight[24].linear", 0.04f);
+			outsideShader.setFloat("pointLight[24].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[25].position", glm::vec3(293.12f, 15.8822f, 80.4954f));
+			outsideShader.setVec3("pointLight[25].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+			outsideShader.setVec3("pointLight[25].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+			outsideShader.setVec3("pointLight[25].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[25].constant", 0.7f);
+			outsideShader.setFloat("pointLight[25].linear", 0.04f);
+			outsideShader.setFloat("pointLight[25].quadratic", 0.01f);
+
+			//Casa
+
+			outsideShader.setVec3("pointLight[26].position", glm::vec3(211.121f, 5.94826f, 282.423f));
+			outsideShader.setVec3("pointLight[26].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[26].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[26].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[26].constant", 0.95f);
+			outsideShader.setFloat("pointLight[26].linear", 0.04f);
+			outsideShader.setFloat("pointLight[26].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[27].position", glm::vec3(208.612f, 3.02237f, 290.348f));
+			outsideShader.setVec3("pointLight[27].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[27].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[27].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[27].constant", 0.95f);
+			outsideShader.setFloat("pointLight[27].linear", 0.04f);
+			outsideShader.setFloat("pointLight[27].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[28].position", glm::vec3(210.852f, 4.31604f, 300.805f));
+			outsideShader.setVec3("pointLight[28].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[28].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[28].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[28].constant", 0.95f);
+			outsideShader.setFloat("pointLight[28].linear", 0.04f);
+			outsideShader.setFloat("pointLight[28].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[29].position", glm::vec3(189.741f, 4.73011f, 315.835f));
+			outsideShader.setVec3("pointLight[29].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[29].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[29].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[29].constant", 0.95f);
+			outsideShader.setFloat("pointLight[29].linear", 0.04f);
+			outsideShader.setFloat("pointLight[29].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[30].position", glm::vec3(178.32f, 4.12308f, 315.864f));
+			outsideShader.setVec3("pointLight[30].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[30].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[30].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[30].constant", 0.95f);
+			outsideShader.setFloat("pointLight[30].linear", 0.04f);
+			outsideShader.setFloat("pointLight[30].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[31].position", glm::vec3(162.546f, 4.49479f, 312.609f));
+			outsideShader.setVec3("pointLight[31].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[31].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[31].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[31].constant", 0.95f);
+			outsideShader.setFloat("pointLight[31].linear", 0.04f);
+			outsideShader.setFloat("pointLight[31].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[32].position", glm::vec3(158.357f, 5.26351f, 314.634f));
+			outsideShader.setVec3("pointLight[32].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[32].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[32].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[32].constant", 0.95f);
+			outsideShader.setFloat("pointLight[32].linear", 0.04f);
+			outsideShader.setFloat("pointLight[32].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[33].position", glm::vec3(153.934f, 4.822f, 314.155f));
+			outsideShader.setVec3("pointLight[33].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[33].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[33].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[33].constant", 0.95f);
+			outsideShader.setFloat("pointLight[33].linear", 0.04f);
+			outsideShader.setFloat("pointLight[33].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[34].position", glm::vec3(149.119f, 2.82754f, 299.724f));
+			outsideShader.setVec3("pointLight[34].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[34].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[34].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[34].constant", 0.95f);
+			outsideShader.setFloat("pointLight[34].linear", 0.04f);
+			outsideShader.setFloat("pointLight[35].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[35].position", glm::vec3(169.745f, 5.57316f, 269.044f));
+			outsideShader.setVec3("pointLight[35].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[35].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[35].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[35].constant", 0.95f);
+			outsideShader.setFloat("pointLight[35].linear", 0.04f);
+			outsideShader.setFloat("pointLight[35].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[36].position", glm::vec3(173.893f, 5.3118f, 268.885f));
+			outsideShader.setVec3("pointLight[36].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[36].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[36].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[36].constant", 0.95f);
+			outsideShader.setFloat("pointLight[36].linear", 0.04f);
+			outsideShader.setFloat("pointLight[36].quadratic", 0.01f);
+
+			outsideShader.setVec3("pointLight[37].position", glm::vec3(178.113f, 5.26151f, 268.561f));
+			outsideShader.setVec3("pointLight[37].ambient", glm::vec3(0.3f, 0.3f, 0.3f));
+			outsideShader.setVec3("pointLight[37].diffuse", glm::vec3(0.14f, 0.14f, 0.14f));
+			outsideShader.setVec3("pointLight[37].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+			outsideShader.setFloat("pointLight[37].constant", 0.95f);
+			outsideShader.setFloat("pointLight[37].linear", 0.04f);
+			outsideShader.setFloat("pointLight[37].quadratic", 0.01f);
+		}
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 tmp = glm::mat4(1.0f);
 		glm::mat4 tmp2 = glm::mat4(1.0f);
 		// view/projection transformations
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, pavement_height, 1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		staticShader.setMat4("projection", projection);
-		staticShader.setMat4("view", view);
+		outsideShader.setMat4("projection", projection);
+		outsideShader.setMat4("view", view);
 
 		//// Light
 		glm::vec3 lightColor = glm::vec3(1.0f);
 		glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
 		glm::vec3 ambientColor = diffuseColor * glm::vec3(0.75f);
-		
+
 		//--------------------
-		// Inicia Casa Real
+		// SHADING EXTERNO
 		//--------------------
-		staticShader.setVec3("aColor", 0.0f, 0.0f, 0.0f);
+
+		outsideShader.setVec3("aColor", 0.0f, 0.0f, 0.0f);
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(200.0f, 0.0f, 300.0f));
 		model = glm::scale(model, glm::vec3(0.35f));
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		bardas.Draw(staticShader);
-		bosque.Draw(staticShader);
-		caminos.Draw(staticShader);
-		casa1.Draw(staticShader);
-		casa2.Draw(staticShader);
-		casa3.Draw(staticShader);
-		casa4.Draw(staticShader);
-		postes.Draw(staticShader);
-		//Animacion 1: PONG
-		tmp = model;
-		tmp = glm::translate(tmp, glm::vec3(0.0f, pong_l_pos, 0.0f));
-		staticShader.setMat4("model", tmp);
-		pong_l.Draw(staticShader);
-		tmp = model;
-		tmp = glm::translate(tmp, glm::vec3(0.0f, pong_r_pos, 0.0f));
-		staticShader.setMat4("model", tmp);
-		pong_r.Draw(staticShader);
-		tmp = model;
-		tmp = glm::translate(tmp, glm::vec3(pong_b_xpos, pong_b_ypos, 0.0f));
-		staticShader.setMat4("model", tmp);
-		pong_b.Draw(staticShader);
+		outsideShader.setMat4("model", model);
+		bardas.Draw(outsideShader);
+		bosque.Draw(outsideShader);
+		caminos.Draw(outsideShader);
+		//De casa 1
+		garage_externo.Draw(outsideShader);
+		techo.Draw(outsideShader);
+		muebles_externos.Draw(outsideShader);
+		paredes_externas.Draw(outsideShader);
+		//Terminan cosas de casa 1
+		casa2.Draw(outsideShader);
+		casa3.Draw(outsideShader);
+		casa4.Draw(outsideShader);
+		postes_noche.Draw(outsideShader);
+		if (!noche)
+		{
+			postes_focos.Draw(outsideShader);
+		}
+
+
 		//Animacion 2: Pelota
 		tmp = model;
 		tmp = glm::translate(tmp, glm::vec3(pel_x, pel_y, pel_z));
 		tmp = glm::rotate(tmp, glm::radians(pel_rot_y), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", tmp);
-		pelota.Draw(staticShader);
+		outsideShader.setMat4("model", tmp);
+		pelota.Draw(outsideShader);
 		//Animacion 3: Avión de papel
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(336.0f, 25.0f + radius, 45.0f));
 		model = glm::translate(model, glm::vec3(avion_pos_x, avion_pos_y, avion_pos_z));
 		model = glm::rotate(model, glm::radians(-avion_rot), glm::vec3(1.0f, 0.0f, 0.0f));
 		model = glm::translate(model, glm::vec3(0.0f, -radius, 0.0f));
-		staticShader.setMat4("model", model);
-		avion.Draw(staticShader);
-		//Animacion 4: Robot aspiradora
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(robot_pos_x, 0.3f, robot_pos_z));
-		model = glm::scale(model, glm::vec3(0.333f));
-		model = glm::rotate(model, glm::radians(robot_rot_y - 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		robot.Draw(staticShader);
-		tmp = glm::translate(model, glm::vec3(1.348f, -0.592f, 0.839f));
-		tmp = glm::rotate(tmp, glm::radians(-rotor_rotacion), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", tmp);
-		robot_rotor_izq.Draw(staticShader);
-		tmp = glm::translate(model, glm::vec3(-1.351f, -0.592f, 0.839f));
-		tmp = glm::rotate(tmp, glm::radians(rotor_rotacion), glm::vec3(0.0f, 1.0f, 0.0f));
-		staticShader.setMat4("model", tmp);
-		robot_rotor_der.Draw(staticShader);
+		outsideShader.setMat4("model", model);
+		avion.Draw(outsideShader);
 		//Animacion 5: Carro
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(movAuto_x, 0.0f, movAuto_z));
 		tmp = model = glm::rotate(model, glm::radians(270.0f + orienta), glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
-		staticShader.setMat4("model", model);
-		carro.Draw(staticShader);
+		outsideShader.setMat4("model", model);
+		carro.Draw(outsideShader);
 
 		model = glm::translate(tmp, glm::vec3(8.5f * 0.4f, 3.5f * 0.4f, 12.9f * 0.4f));
 		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(-rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		llanta.Draw(staticShader);	//Izq delantera
+		outsideShader.setMat4("model", model);
+		llanta.Draw(outsideShader);	//Izq delantera
 
 		model = glm::translate(tmp, glm::vec3(-8.5f * 0.4f, 3.5f * 0.4f, 12.9f * 0.4f));
 		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, glm::radians(rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		llanta.Draw(staticShader);	//Der delantera
+		outsideShader.setMat4("model", model);
+		llanta.Draw(outsideShader);	//Der delantera
 
 		model = glm::translate(tmp, glm::vec3(-8.5f * 0.4f, 4.0f * 0.4f, -14.5f * 0.4f));
 		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, glm::radians(rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		llanta.Draw(staticShader);	//Der trasera
+		outsideShader.setMat4("model", model);
+		llanta.Draw(outsideShader);	//Der trasera
 
 		model = glm::translate(tmp, glm::vec3(8.5f * 0.4f, 4.0f * 0.4f, -14.5f * 0.4f));
 		model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));
 		model = glm::rotate(model, glm::radians(-rot_llanta), glm::vec3(1.0f, 0.0f, 0.0f));
-		staticShader.setMat4("model", model);
-		llanta.Draw(staticShader);	//Izq trase
-		// draw skybox as last
-		// -------------------
+		outsideShader.setMat4("model", model);
+		llanta.Draw(outsideShader);	//Izq trase
 
-		// -------------------------------------------------------------------------------------------------------------------------
-		// Escenario
-		// -------------------------------------------------------------------------------------------------------------------------
-		/*model = glm::mat4(1.0f);
-		projectionShader.use();
-		projectionShader.setVec3("viewPos", camera.Position);
-		projectionShader.setMat4("model", model);
-		projectionShader.setMat4("view", view);
-		projectionShader.setMat4("projection", projection);
-
-		drawingGrass();
-		projectionShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
-		projectionShader.setMat4("model", model);
-		glBindTexture(GL_TEXTURE_2D, t_pasto);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		drawingStreet();
-		projectionShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
-		projectionShader.setMat4("model", model);
-		glBindTexture(GL_TEXTURE_2D, t_acera);
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-		glBindTexture(GL_TEXTURE_2D, t_pavimento);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(36 * sizeof(float)));*/
-
+		//ESCENARIO
 		model = glm::mat4(1.0f);
-		staticShader.setVec3("viewPos", camera.Position);
-		staticShader.setMat4("model", model);
-		staticShader.setMat4("view", view);
-		staticShader.setMat4("projection", projection);
+		outsideShader.setVec3("viewPos", camera.Position);
+		outsideShader.setMat4("model", model);
+		outsideShader.setMat4("view", view);
+		outsideShader.setMat4("projection", projection);
 		drawingGrass();
-		staticShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
-		staticShader.setMat4("model", model);
+		outsideShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
+		outsideShader.setMat4("model", model);
 		glBindTexture(GL_TEXTURE_2D, t_pasto);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		drawingStreet();
-		staticShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
-		staticShader.setMat4("model", model);
+		outsideShader.setVec3("aColor", 1.0f, 1.0f, 1.0f);
+		outsideShader.setMat4("model", model);
 		glBindTexture(GL_TEXTURE_2D, t_acera);
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		glBindTexture(GL_TEXTURE_2D, t_pavimento);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(36 * sizeof(float)));
+		//--------------------
+		// SHADING INTERNO
+		//--------------------
 
+		insideShader.use();
+		//Setup shader
+		insideShader.setMat4("projection", projection);
+		insideShader.setMat4("view", view);
+		insideShader.setVec3("viewPos", camera.Position);
+		insideShader.setVec3("dirLight.direction", insideLightDirection);
+		insideShader.setFloat("material_shininess", 32.0f);
+		if(noche)
+		{
+			
+			insideShader.setVec3("dirLight.ambient", glm::vec3(0.5f, 0.5f, 0.5f));
+			insideShader.setVec3("dirLight.diffuse", glm::vec3(0.2f, 0.2f, 0.2f));
+			insideShader.setVec3("dirLight.specular", glm::vec3(0.1f, 0.1f, 0.1f));
+		}
+		else
+		{
+			insideShader.setVec3("dirLight.ambient", glm::vec3(0.5f, 0.5f, 0.5f));
+			insideShader.setVec3("dirLight.diffuse", glm::vec3(0.3f, 0.3f, 0.3f));
+			insideShader.setVec3("dirLight.specular", glm::vec3(0.1f, 0.1f, 0.1f));
+		}
+		insideShader.setVec3("pointLight[0].position", lightPosition);
+		insideShader.setVec3("pointLight[0].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+		insideShader.setVec3("pointLight[0].diffuse", glm::vec3(0.0f, 0.0f, 0.0f));
+		insideShader.setVec3("pointLight[0].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+		insideShader.setFloat("pointLight[0].constant", 0.8f);
+		insideShader.setFloat("pointLight[0].linear", 0.009f);
+		insideShader.setFloat("pointLight[0].quadratic", 0.032f);
+		//Finaliza setup
+		insideShader.setVec3("aColor", 0.0f, 0.0f, 0.0f);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(200.0f, 0.0f, 300.0f));
+		model = glm::scale(model, glm::vec3(0.35f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		insideShader.setMat4("model", model);
+		//Casa 1, interno
+		paredes_internas.Draw(insideShader);
+		if(!noche)
+		{
+			lamparas_dia.Draw(insideShader);
+		}
+		shading_interno.Draw(insideShader);
+
+		//Animacion 4: Robot aspiradora
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(robot_pos_x, 0.3f, robot_pos_z));
+		model = glm::scale(model, glm::vec3(0.333f));
+		model = glm::rotate(model, glm::radians(robot_rot_y - 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		insideShader.setMat4("model", model);
+		robot.Draw(insideShader);
+		tmp = glm::translate(model, glm::vec3(1.348f, -0.592f, 0.839f));
+		tmp = glm::rotate(tmp, glm::radians(-rotor_rotacion), glm::vec3(0.0f, 1.0f, 0.0f));
+		insideShader.setMat4("model", tmp);
+		robot_rotor_izq.Draw(insideShader);
+		tmp = glm::translate(model, glm::vec3(-1.351f, -0.592f, 0.839f));
+		tmp = glm::rotate(tmp, glm::radians(rotor_rotacion), glm::vec3(0.0f, 1.0f, 0.0f));
+		insideShader.setMat4("model", tmp);
+		robot_rotor_der.Draw(insideShader);
+
+		/// Shader de light sources
+
+		lampShader.use();
+		//Setup luces
+		lampShader.setVec3("viewPos", camera.Position);
+		lampShader.setVec3("dirLight.direction", insideLightDirection);
+		lampShader.setFloat("material_shininess", 32.0f);
+		//Setup shader
+		lampShader.setMat4("projection", projection);
+		lampShader.setMat4("view", view);
+		//Finaliza setup
+		lampShader.setVec3("aColor", 0.0f, 0.0f, 0.0f);
+		lampShader.setVec3("dirLight.ambient", glm::vec3(1.0f, 1.0f, 1.0f));
+		lampShader.setVec3("dirLight.diffuse", glm::vec3(1.0f, 1.0f, 1.0f));
+		lampShader.setVec3("dirLight.specular", glm::vec3(0.0f, 0.0f, 0.0f));
+		lampShader.setVec3("pointLight[0].position", glm::vec3(-20.0f, -20.0f, -20.0f));
+		lampShader.setVec3("pointLight[0].ambient", glm::vec3(0.6f, 0.6f, 0.6f));
+		lampShader.setVec3("pointLight[0].diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+		lampShader.setVec3("pointLight[0].specular", glm::vec3(0.0f, 0.0f, 0.0f));
+		lampShader.setFloat("pointLight[0].constant", 1.0f);
+		lampShader.setFloat("pointLight[0].linear", 0.04f);
+		lampShader.setFloat("pointLight[0].quadratic", 0.01f);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(200.0f, 0.0f, 300.0f));
+		model = glm::scale(model, glm::vec3(0.35f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//Animacion 1: PONG
+		tmp = model;
+		tmp = glm::translate(tmp, glm::vec3(0.0f, pong_l_pos, 0.0f));
+		lampShader.setMat4("model", tmp);
+		pong_l.Draw(lampShader);
+		tmp = model;
+		tmp = glm::translate(tmp, glm::vec3(0.0f, pong_r_pos, 0.0f));
+		lampShader.setMat4("model", tmp);
+		pong_r.Draw(lampShader);
+		tmp = model;
+		tmp = glm::translate(tmp, glm::vec3(pong_b_xpos, pong_b_ypos, 0.0f));
+		lampShader.setMat4("model", tmp);
+		pong_b.Draw(lampShader);
+		if(noche)
+		{
+			lampShader.setMat4("model", model);
+			lamparas_dia.Draw(lampShader);
+			postes_focos.Draw(lampShader);
+		}
 		// -------------------------------------------------------------------------------------------------------------------------
 		// Termina Escenario
 		// -------------------------------------------------------------------------------------------------------------------------
-		
+
 		skyboxShader.use();
-		skybox.Draw(skyboxShader, view, projection, camera);
+		if (noche)
+		{
+			skyboxNight.Draw(skyboxShader, view, projection, camera);
+		}
+		else
+		{
+			skybox.Draw(skyboxShader, view, projection, camera);
+		}
+		
 
 		// Limitar el framerate a 60
 		deltaTime = SDL_GetTicks() - lastFrame; // time for full 1 loop
@@ -1941,14 +2648,14 @@ int main()
 	}
 
 	skybox.Terminate();
-
+	skyboxNight.Terminate();
 	glfwTerminate();
 	return 0;
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
+void my_input(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
@@ -1960,7 +2667,7 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		interpolationRecorrido();
 		play = false;
 	}
-		
+
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(BACKWARD, (float)deltaTime * speedMultiplier);
@@ -1969,7 +2676,7 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		interpolationRecorrido();
 		play = false;
 	}
-		
+
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(LEFT, (float)deltaTime * speedMultiplier);
@@ -1978,7 +2685,7 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		interpolationRecorrido();
 		play = false;
 	}
-		
+
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(RIGHT, (float)deltaTime * speedMultiplier);
@@ -1987,11 +2694,13 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		interpolationRecorrido();
 		play = false;
 	}
-		
+
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 		speedMultiplier *= 2;
 	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		speedMultiplier /= 2;
+	if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
+		noche = !noche;
 	//PARA PONG
 	/*if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
 		pel_x += 0.1f;
@@ -2009,13 +2718,13 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		pel_rot_y += 0.1f;
 	if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS)
 		pel_rot_y -= 0.1f;*/
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-	{
-		/*std::cout << "POSX: " << camera.Position.x << std::endl;
-		std::cout << "POSY: " << camera.Position.y << std::endl;
-		std::cout << "POSZ: " << camera.Position.z << std::endl;*/
-		std::cout << "(" << camera.Position.x << "f, " << camera.Position.y << "f, " << camera.Position.z << "f);" << std::endl;
-	}
+	//if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	//{
+	//	/*std::cout << "POSX: " << camera.Position.x << std::endl;
+	//	std::cout << "POSY: " << camera.Position.y << std::endl;
+	//	std::cout << "POSZ: " << camera.Position.z << std::endl;*/
+	//	std::cout << "(" << camera.Position.x << "f, " << camera.Position.y << "f, " << camera.Position.z << "f);" << std::endl;
+	//}
 	if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	{
 		if (play == false && (FrameIndexRec > 1))
@@ -2036,14 +2745,14 @@ void my_input(GLFWwindow *window, int key, int scancode, int action, int mode)
 		}
 	}
 
-	//To Save a KeyFramePong
-	if (key == GLFW_KEY_L && action == GLFW_PRESS)
-	{
-		if (FrameIndexRec < MAX_FRAMES_RECORRIDO)
-		{
-			saveFrame();
-		}
-	}
+	////To Save a KeyFramePong
+	//if (key == GLFW_KEY_L && action == GLFW_PRESS)
+	//{
+	//	if (FrameIndexRec < MAX_FRAMES_RECORRIDO)
+	//	{
+	//		saveFrame();
+	//	}
+	//}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -2059,7 +2768,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if(!play)
+	if (!play)
 	{
 		if (firstMouse)
 		{

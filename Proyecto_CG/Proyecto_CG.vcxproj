@@ -23,8 +23,12 @@
     <ClCompile Include="proyecto_main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\shader_lamp.fs" />
+    <None Include="shaders\shader_lamp.vs" />
     <None Include="shaders\shader_Lights.fs" />
     <None Include="shaders\shader_Lights.vs" />
+    <None Include="shaders\shader_MLights.fs" />
+    <None Include="shaders\shader_MLights.vs" />
     <None Include="shaders\shader_texture_color.fs" />
     <None Include="shaders\shader_texture_color.vs" />
     <None Include="shaders\skybox.fs" />
