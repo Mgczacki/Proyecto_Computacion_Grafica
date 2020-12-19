@@ -70,7 +70,7 @@ const unsigned int SCR_WIDTH = 2560;
 const unsigned int SCR_HEIGHT = 1440;
 
 // camera
-Camera camera(glm::vec3(118.702f, 10.0f, 277.351));
+Camera camera(glm::vec3(308.603, 15.5462, 304.647));
 float speedMultiplier = 0.3;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
@@ -1565,12 +1565,12 @@ int main()
 
 	vector<std::string> faces2
 	{
-		"resources/skybox/posx.jpg",
-		"resources/skybox/negx.jpg",
-		"resources/skybox/posy.jpg",
-		"resources/skybox/negy.jpg",
-		"resources/skybox/posz.jpg",
-		"resources/skybox/negz.jpg"
+		"resources/skybox/posx.png",
+		"resources/skybox/negx.png",
+		"resources/skybox/posy.png",
+		"resources/skybox/negy.png",
+		"resources/skybox/posz.png",
+		"resources/skybox/negz.png"
 	};
 
 	Skybox skybox = Skybox(faces);
@@ -1579,7 +1579,6 @@ int main()
 	// Shader configuration
 	// --------------------
 	skyboxShader.use();
-	skyboxShader.setInt("skybox", 0);
 
 	// load models
 	// -----------
@@ -1757,7 +1756,6 @@ int main()
 	// -----------
 	while (!glfwWindowShouldClose(window))
 	{
-		skyboxShader.setInt("skybox", 0);
 
 		// per-frame time logic
 		// --------------------
@@ -2625,10 +2623,12 @@ int main()
 		skyboxShader.use();
 		if (noche)
 		{
+			skyboxShader.setInt("skybox", 1);
 			skyboxNight.Draw(skyboxShader, view, projection, camera);
 		}
 		else
 		{
+			skyboxShader.setInt("skybox", 0);
 			skybox.Draw(skyboxShader, view, projection, camera);
 		}
 		
