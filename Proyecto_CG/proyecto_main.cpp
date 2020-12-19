@@ -84,9 +84,9 @@ double	deltaTime = 0.0f,
 
 //Lighting
 glm::vec3 lightPosition(0.0f, 4.0f, -10.0f);
-glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
+glm::vec3 lightDirection(0.0f, -1.0f, 1.0f);
 glm::vec3 insideLightPosition(0.0f, 4.0f, -10.0f);
-glm::vec3 insideLightDirection(0.0f, -1.0f, 0.0f);
+glm::vec3 insideLightDirection(0.0f, -1.0f, 0.1f);
 
 GLuint VBO, VAO, EBO;
 
@@ -1584,12 +1584,12 @@ int main()
 	// -----------
 	//La casa
 	//Shader externo
-	Model paredes_externas("resources/objects/casa1/paredes_externas.obj");
+	Model paredes_externas("resources/objects/casa1/paredes_externas2.obj");
 	Model garage_externo("resources/objects/casa1/garage_externo.obj");
 	Model muebles_externos("resources/objects/casa1/muebles_externos.obj");
 	Model techo("resources/objects/casa1/techo.obj");
 	//Shader interno
-	Model paredes_internas("resources/objects/casa1/paredes_internas.obj");
+	Model paredes_internas("resources/objects/casa1/paredes_internas2.obj");
 	Model shading_interno("resources/objects/casa1/shading_interno.obj");
 	//Lámparas
 	Model lamparas_dia("resources/objects/lamparas/lamparas.obj");
