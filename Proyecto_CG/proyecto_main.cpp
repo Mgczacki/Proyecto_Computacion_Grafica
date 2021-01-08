@@ -66,14 +66,15 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void my_input(GLFWwindow* window, int key, int scancode, int action, int mods);
 void animate(void);
 // settings
-const unsigned int SCR_WIDTH = 2560;
-const unsigned int SCR_HEIGHT = 1440;
+
+unsigned int SCR_WIDTH;
+unsigned int SCR_HEIGHT;
 
 // camera
 Camera camera(glm::vec3(308.603, 15.5462, 304.647));
 float speedMultiplier = 0.3;
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
+float lastX;
+float lastY;
 bool firstMouse = true;
 
 // timing
@@ -141,7 +142,7 @@ rec_yaw_inc = 0.0f;
 
 #define MAX_FRAMES_RECORRIDO 110//Guardo unos extra, pero realmente son 106
 
-int i_max_steps = 60;
+int i_max_steps = 120;
 int i_curr_steps = 0;
 int i_curr_steps_p = 0;
 typedef struct pong_frame
@@ -296,7 +297,7 @@ void interpolationPelota(void)
 
 bool robot_correct_angle(float x, float z)
 {
-	float inc = 5.0f;//5 grados de rotacion
+	float inc = 2.5f;//5 grados de rotacion
 	float deltax = x - robot_pos_x;
 	float deltaz = z - robot_pos_z;
 	float target_angle = vectorAngle(-deltax, deltaz);
@@ -335,7 +336,7 @@ bool robot_correct_position(float x, float z)
 {
 	if (robot_pos_x == x && robot_pos_z == z)
 		return true;
-	float inc = 0.10f;//Incremento de distancia por unidad de tiempo
+	float inc = 0.05f;//Incremento de distancia por unidad de tiempo
 	float deltax = x - robot_pos_x;
 	float deltaz = z - robot_pos_z;
 	float target_angle = degToRad(vectorAngle(deltax, deltaz));
@@ -382,7 +383,7 @@ bool car_correct_position(float x, float z)
 {
 	if (movAuto_x == x && movAuto_z == z)
 		return true;
-	float inc = 1.0f;//Incremento de distancia por unidad de tiempo
+	float inc = 0.5f;//Incremento de distancia por unidad de tiempo
 	float deltax = x - movAuto_x;
 	float deltaz = z - movAuto_z;
 	float target_angle = degToRad(vectorAngle(deltax, deltaz));
@@ -688,78 +689,78 @@ void animate(void)
 			if (avion_pos_z >= 100.0f)
 			{
 				plane_state++;
-				avion_rot += 15.0f;
-				radius = 15.0f;
+				avion_rot += 7.5f;
+				radius = 10.0f;
 			}
 			else
 			{
-				avion_pos_x -= 0.157f;
-				avion_pos_y -= 0.3;
-				avion_pos_z += 4.0f;
+				avion_pos_x -= 0.0785f;
+				avion_pos_y -= 0.15;
+				avion_pos_z += 2.0f;
 			}
 			break;
 		case 1:
-			if (avion_rot == 360.0f)
+			if (avion_rot >= 360.0f)
 			{
 				avion_rot = 0.0f;
 				plane_state++;
 			}
 			else
 			{
-				avion_rot += 15.0f;
+				avion_rot += 7.5f;
 			}
 			break;
 		case 2:
 			if (avion_pos_z >= 230.0f)
 			{
 				plane_state++;
-				avion_rot += 15.0f;
-				radius = 10.0f;
+				avion_rot += 10.0f;
+				radius = 7.0f;
 			}
 			else
 			{
-				avion_pos_x -= 0.157f;
-				avion_pos_y -= 0.2;
-				avion_pos_z += 3.0f;
+				avion_pos_x -= 0.05f;
+				avion_pos_y -= 0.10;
+				avion_pos_z += 1.6f;
 			}
 			break;
 		case 3:
-			if (avion_rot == 360.0f)
+			if (avion_rot >= 360.0f)
 			{
 				avion_rot = 0.0f;
 				plane_state++;
 			}
 			else
 			{
-				avion_rot += 15.0f;
+				avion_rot += 10.0f;
 			}
 			break;
 		case 4:
-			if (avion_pos_z == 400.0f)
+			if (avion_pos_z >= 400.0f)
 			{
 				plane_state++;
-				avion_rot += 20.0f;
+				avion_rot += 10.0f;
 				radius = 5.0f;
 			}
 			else
 			{
-				avion_pos_z += 2.0f;
-				avion_pos_y -= 0.0203f;
+				avion_pos_z += 1.3f;
+				avion_pos_y -= 0.009f;
 			}
 			break;
 		case 5:
-			if (avion_rot == 360.0f)
+			if (avion_rot >= 360.0f)
 			{
 				avion_rot = 0.0f;
 				plane_state++;
 			}
 			else
 			{
-				avion_rot += 20.0f;
+				avion_rot += 10.0f;
 			}
 			break;
 		default:
-			if (avion_pos_z == 720.0f)
+			if (avion_pos_z >= 720.0f)
 			{
 				plane_state = 0;
 				avion_pos_x = 0.0f;
@@ -768,8 +769,8 @@ void animate(void)
 			}
 			else
 			{
-				avion_pos_z += 2.0f;
-				avion_pos_y -= 0.0218f;
+				avion_pos_z += 1.3f;
+				avion_pos_y -= 0.009f;
 			}
 			break;
 		}
@@ -880,7 +881,7 @@ void drawingStreet()
 {
 	float vertices[] = {
 		// positions
-// texture coords
+		// texture coords
 		 street_left_right,  street_height , map_max_z ,  0.0f, 1.0f, 0.0f,  street_left_right- street_left_left, 0.0f, // north right
 		 street_left_right,   street_height , 0.0f, 0.0f, 1.0f, 0.0f, street_left_right - street_left_left, map_max_z, // south right
 		 street_left_left ,   street_height , 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, map_max_z, // south left
@@ -1518,6 +1519,11 @@ int main()
 
 	// glfw window creation
 	// --------------------
+	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+	SCR_WIDTH = mode->width;
+	SCR_HEIGHT = mode->height;
+	lastX = SCR_WIDTH / 2.0f;
+	lastY = SCR_HEIGHT / 2.0f;
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Proyecto Final", NULL, NULL);
 	if (window == NULL)
 	{
