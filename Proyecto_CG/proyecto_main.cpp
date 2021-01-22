@@ -172,7 +172,7 @@ typedef struct pelota_frame
 PELOTA_FRAME KeyFramePelota[MAX_FRAMES_PELOTA];
 int FrameIndexPelota = 13;			//introducir datos
 int playIndexPelota = 0;
-
+int playIndexPelotaRand = 1;
 //RECORRIDO
 
 typedef struct recorrido_frame
@@ -197,7 +197,11 @@ robot_pos_z = 290.874f,
 robot_rot_y = 0.0f;
 
 //Animación avión
-float avion_pos_x = 0.0f,
+float
+avion_delta_despl_inicial = 2.0,
+avion_delta_despl = avion_delta_despl_inicial, //Cuanto se desplaza el avion en la animación, función.
+	avion_last_pos_y = 0.0f,
+    avion_pos_x = 0.0f,
 	avion_pos_y = 0.0f,
 	avion_pos_z = 0.0f,
 	avion_rot = 0.0f;
@@ -289,10 +293,10 @@ void interpolationPong(void)
 }
 void interpolationPelota(void)
 {
-	pel_x_inc = (KeyFramePelota[playIndexPelota + 1].pel_x - KeyFramePelota[playIndexPelota].pel_x) / i_max_steps;
-	pel_y_inc = (KeyFramePelota[playIndexPelota + 1].pel_y - KeyFramePelota[playIndexPelota].pel_y) / i_max_steps;
-	pel_z_inc = (KeyFramePelota[playIndexPelota + 1].pel_z - KeyFramePelota[playIndexPelota].pel_z) / i_max_steps;
-	pel_rot_y_inc = (KeyFramePelota[playIndexPelota + 1].pel_rot_y - KeyFramePelota[playIndexPelota].pel_rot_y) / i_max_steps;
+	pel_x_inc = (KeyFramePelota[playIndexPelotaRand].pel_x - KeyFramePelota[playIndexPelota].pel_x) / i_max_steps;
+	pel_y_inc = (KeyFramePelota[playIndexPelotaRand].pel_y - KeyFramePelota[playIndexPelota].pel_y) / i_max_steps;
+	pel_z_inc = (KeyFramePelota[playIndexPelotaRand].pel_z - KeyFramePelota[playIndexPelota].pel_z) / i_max_steps;
+	pel_rot_y_inc = (KeyFramePelota[playIndexPelotaRand].pel_rot_y - KeyFramePelota[playIndexPelota].pel_rot_y) / i_max_steps;
 }
 
 bool robot_correct_angle(float x, float z)
@@ -319,7 +323,6 @@ bool robot_correct_angle(float x, float z)
 	if (abs(delta_angle) <= inc)
 	{
 		robot_rot_y = target_angle;
-		//std::cout << "Reached target angle " << target_angle << std::endl;
 	}
 	else if (delta_angle < 0)
 	{
@@ -342,8 +345,8 @@ bool robot_correct_position(float x, float z)
 	float target_angle = degToRad(vectorAngle(deltax, deltaz));
 	float incx = inc * cos(target_angle);
 	float incz = inc * sin(target_angle);
-	if (sqrt((deltax * deltax) + (deltaz * deltaz)) <= inc)
-	{
+	if (sqrt((deltax * deltax) + (deltaz * deltaz)) <= inc)//Si quedamos a menos distancia que un delta
+	{//Solo nos ponemos en el waypoint deseado
 		robot_pos_x = x;
 		robot_pos_z = z;
 	}
@@ -361,8 +364,6 @@ bool angle_verified = false;
 int plane_state = 0;
 int robot_state = -1;
 
-float radius = 20.0f;
-
 //Para animacion del carro
 float	movAuto_x = 0.0f,
 movAuto_z = 0.0f,
@@ -377,19 +378,28 @@ float anim_x[] = { 118.702, 118.702, 113.514, 109.169, 106.169, 104.347, 103.534
 float anim_z[] = { 277.351, 278.351, 278.816, 277.328, 275.966, 273.054, 270.882, 268.724, 266.517, 264.397, 261.528, 257.828, 255.598,
 253.415, 251.334, 249.832, 248.256, 245.477, 243.75, 242.395, 246.957, 246.919, 246.361, 245.567, 244.3, 242.34, 240.412,
 238.009, 233.838, 229.598, 159.368, 2.2559};
+//La aceleracion del carro en cada punto
+float accel_carro[] = {1.0, 0.8, 0.4, 1.0, 0.8, 1.2, 1.2, 1.0, 1.0, 1.2,
+					   1.2, 1.2, 1.5, 1.5, 0.7, 1.0, 1.0, 0.8, 0.8, 1.0,
+                       1.2, 1.0, 0.7, 0.9, 1.0, 0.8, 0.9, 1.0, 1.3, 1.8,
+                       1.8, 1.6, 1.0};//1 extra por indices
 int state_carro = 32;
 
+//Auto ajusta su movimiento con su aceleracion
+float car_inc_start = 0.5f;
+float car_inc = car_inc_start;
+float car_inc_ang_start = 4.0f;
+float car_inc_ang = car_inc_ang_start;
 bool car_correct_position(float x, float z)
 {
 	if (movAuto_x == x && movAuto_z == z)
 		return true;
-	float inc = 0.5f;//Incremento de distancia por unidad de tiempo
 	float deltax = x - movAuto_x;
 	float deltaz = z - movAuto_z;
 	float target_angle = degToRad(vectorAngle(deltax, deltaz));
-	float incx = inc * cos(target_angle);
-	float incz = inc * sin(target_angle);
-	if (sqrt((deltax * deltax) + (deltaz * deltaz)) <= inc)
+	float incx = car_inc * cos(target_angle);
+	float incz = car_inc * sin(target_angle);
+	if (sqrt((deltax * deltax) + (deltaz * deltaz)) <= car_inc)
 	{
 		movAuto_x = x;
 		movAuto_z = z;
@@ -401,8 +411,8 @@ bool car_correct_position(float x, float z)
 	}
 	//Volteamos el carro con cierto smoothing.
 	float angulo = vectorAngle(-deltax, deltaz);
+	//Tomar en cuenta que el carro modifica su posicion MIENTRAS se mueve, a diferencia del robot
 	float delta_angle = orienta - angulo;
-	float inc_angulo = 4.0f;
 	if (delta_angle != 0.0f)
 	{
 		if (delta_angle > 180.0f)
@@ -413,18 +423,17 @@ bool car_correct_position(float x, float z)
 		{
 			delta_angle = delta_angle + 360.0f;
 		}
-		if (abs(delta_angle) <= inc_angulo)
+		if (abs(delta_angle) <= car_inc_ang)//Si esta mas cerca que el delta angulo, solo hacemos la asignacion para no pasarnos
 		{
 			orienta = angulo;
-			//std::cout << "Reached target angle " << target_angle << std::endl;
 		}
 		else if (delta_angle < 0)
 		{
-			orienta += inc_angulo;
+			orienta += car_inc_ang;
 		}
 		else
 		{
-			orienta -= inc_angulo;
+			orienta -= car_inc_ang;
 		}
 	}
 	return false;
@@ -471,11 +480,15 @@ void animate(void)
 				i_curr_steps_p++;
 			}
 		}
-		//Para Keyframes (Pong y Pelota)
+		//Para Keyframes (Pong y Pelota - Aunque pelota esta aleatorizada)
 		if (i_curr_steps >= i_max_steps) //end of animation between frames?
 		{
 			playIndexPong++;
-			playIndexPelota++;
+			playIndexPelota = playIndexPelotaRand;
+			while (playIndexPelotaRand == playIndexPelota)
+			{
+				playIndexPelotaRand = rand() % 13;
+			}
 			float dx = camera.Position.x - 167.82f;
 			float dy = camera.Position.y - 10.0f;
 			float dz = camera.Position.z - 308.71f;
@@ -491,16 +504,7 @@ void animate(void)
 			{  
 				interpolationPong();
 			}
-			if (playIndexPelota > FrameIndexPelota - 2)	//end of total animation?
-			{
-				playIndexPelota = 0;
-				resetPelotaElements();
-				interpolationPelota();
-			}
-			else //Next frame interpolations
-			{
-				interpolationPelota();
-			}
+			interpolationPelota();
 			i_curr_steps = 0; //Reset counter
 		}
 		else
@@ -682,100 +686,35 @@ void animate(void)
 			}
 			break;
 		}
-		//Para avion
-		switch (plane_state) 
+		//Para el avion
+		//El avion avanza en el eje Z
+		//Tiene la trayectoria de una onda sinusoidal amortiguada
+		if (avion_pos_z >= 720.0f)
+		{//Reiniciar animacion
+			avion_pos_z = 0.0f;
+			avion_pos_x = 0.0f;
+			avion_pos_y = 0.0f;
+			avion_rot = 0.0f;
+			avion_last_pos_y = 0.0f;
+			avion_delta_despl = avion_delta_despl_inicial;
+		}else
 		{
-		case 0:
-			if (avion_pos_z >= 100.0f)
+			float a = 4000.0f;
+			float b = 74.0f;
+			float c = 210.0f;
+			avion_delta_despl *= 0.9976; //Drag/Friccion del aire/Perdida de momento
+			avion_pos_z += avion_delta_despl;
+			avion_last_pos_y = avion_pos_y;
+			avion_pos_y = (a / (avion_pos_z + b)) * sin(avion_pos_z * 2.0f * 3.1415926f / c);
+			float avion_delta_y = (avion_pos_y - avion_last_pos_y);
+			avion_rot = vectorAngle(avion_delta_despl, avion_delta_y);
+			if(avion_delta_y < 0.0f)//Efecto de la gravedad
 			{
-				plane_state++;
-				avion_rot += 7.5f;
-				radius = 10.0f;
+				avion_delta_despl *= 1.0047; //Esto es mayor al efecto del drag, por lo que aumenta la velocidad
 			}
-			else
-			{
-				avion_pos_x -= 0.0785f;
-				avion_pos_y -= 0.15;
-				avion_pos_z += 2.0f;
-			}
-			break;
-		case 1:
-			if (avion_rot >= 360.0f)
-			{
-				avion_rot = 0.0f;
-				plane_state++;
-			}
-			else
-			{
-				avion_rot += 7.5f;
-			}
-			break;
-		case 2:
-			if (avion_pos_z >= 230.0f)
-			{
-				plane_state++;
-				avion_rot += 10.0f;
-				radius = 7.0f;
-			}
-			else
-			{
-				avion_pos_x -= 0.05f;
-				avion_pos_y -= 0.10;
-				avion_pos_z += 1.6f;
-			}
-			break;
-		case 3:
-			if (avion_rot >= 360.0f)
-			{
-				avion_rot = 0.0f;
-				plane_state++;
-			}
-			else
-			{
-				avion_rot += 10.0f;
-			}
-			break;
-		case 4:
-			if (avion_pos_z >= 400.0f)
-			{
-				plane_state++;
-				avion_rot += 10.0f;
-				radius = 5.0f;
-			}
-			else
-			{
-				avion_pos_z += 1.3f;
-				avion_pos_y -= 0.009f;
-			}
-			break;
-		case 5:
-			if (avion_rot >= 360.0f)
-			{
-				avion_rot = 0.0f;
-				plane_state++;
-			}
-			else
-			{
-				avion_rot += 10.0f;
-			}
-			break;
-		default:
-			if (avion_pos_z >= 720.0f)
-			{
-				plane_state = 0;
-				avion_pos_x = 0.0f;
-				avion_pos_y = 0.0f;
-				avion_pos_z = 0.0f;
-			}
-			else
-			{
-				avion_pos_z += 1.3f;
-				avion_pos_y -= 0.009f;
-			}
-			break;
 		}
 		//Para el carro
-		rot_llanta += 60.0f;
+		rot_llanta += 10.0f * (car_inc/car_inc_start);//Ajustamos velocidad de giro de ruedas con velocidad del carro
 		if (rot_llanta >= 360.0f)
 		{
 			rot_llanta = 0.0f;
@@ -783,6 +722,8 @@ void animate(void)
 		if (state_carro == steps_carro)
 		{
 			state_carro = 1;
+			car_inc = car_inc_start;//Reiniciamos la velocidad de giro
+			car_inc_ang = car_inc_ang_start;//Reiniciamos la velocidad de giro
 			movAuto_x = anim_x[0];
 			movAuto_z = anim_z[0];
 			float dx = anim_x[2] - anim_x[1];
@@ -792,6 +733,8 @@ void animate(void)
 		if(car_correct_position(anim_x[state_carro], anim_z[state_carro]))
 		{
 			state_carro++;
+			car_inc *= accel_carro[state_carro];
+			car_inc_ang *= accel_carro[state_carro];
 		}
 }
 
@@ -2457,10 +2400,9 @@ int main()
 		pelota.Draw(outsideShader);
 		//Animacion 3: Avión de papel
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(336.0f, 25.0f + radius, 45.0f));
+		model = glm::translate(model, glm::vec3(336.0f, 25.0f, 45.0f));//pos inicial
 		model = glm::translate(model, glm::vec3(avion_pos_x, avion_pos_y, avion_pos_z));
 		model = glm::rotate(model, glm::radians(-avion_rot), glm::vec3(1.0f, 0.0f, 0.0f));
-		model = glm::translate(model, glm::vec3(0.0f, -radius, 0.0f));
 		outsideShader.setMat4("model", model);
 		avion.Draw(outsideShader);
 		//Animacion 5: Carro
@@ -2724,13 +2666,13 @@ void my_input(GLFWwindow* window, int key, int scancode, int action, int mode)
 		pel_rot_y += 0.1f;
 	if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS)
 		pel_rot_y -= 0.1f;*/
-	//if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-	//{
-	//	/*std::cout << "POSX: " << camera.Position.x << std::endl;
-	//	std::cout << "POSY: " << camera.Position.y << std::endl;
-	//	std::cout << "POSZ: " << camera.Position.z << std::endl;*/
-	//	std::cout << "(" << camera.Position.x << "f, " << camera.Position.y << "f, " << camera.Position.z << "f);" << std::endl;
-	//}
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		/*std::cout << "POSX: " << camera.Position.x << std::endl;
+		std::cout << "POSY: " << camera.Position.y << std::endl;
+		std::cout << "POSZ: " << camera.Position.z << std::endl;*/
+		std::cout << "(" << camera.Position.x << "f, " << camera.Position.y << "f, " << camera.Position.z << "f);" << std::endl;
+	}
 	if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	{
 		if (play == false && (FrameIndexRec > 1))
